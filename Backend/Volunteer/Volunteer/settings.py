@@ -1,23 +1,13 @@
-# Volunteer/settings.py
-
 from pathlib import Path
-from datetime import timedelta  # Add this import
+from datetime import timedelta
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-gbwkmfw8tlf45t&z@=t)%p&npsn3m)1dj6@um^uhxpcz-t#l4b'
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ['localhost', '127.0.0.1','192.168.0.181',".ngrok-free.app"]
 AUTH_USER_MODEL = 'accounts.User'
 
-
-# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -25,20 +15,23 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'accounts',  # Ensure this is included for custom auth backend
+    'accounts',
     'appointments',
     'channels',
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    'debug_toolbar',
 ]
 
-ASGI_APPLICATION = 'Volunteer.asgi.application'
+ASGI_APPLICATION = "Volunteer.asgi.application"
 
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
     },
 }
 
@@ -51,25 +44,23 @@ REST_FRAMEWORK = {
     ),
 }
 
-
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media' 
+MEDIA_ROOT = BASE_DIR / 'media'
 
-# Add SIMPLE_JWT configuration here
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),  # Increased for testing
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': 'django-insecure-gbwkmfw8tlf45t&z@=t)%p&npsn3m)1dj6@um^uhxpcz-t#l4b',  # Match SECRET_KEY
+    'SIGNING_KEY': 'django-insecure-gbwkmfw8tlf45t&z@=t)%p&npsn3m)1dj6@um^uhxpcz-t#l4b',
     'VERIFYING_KEY': None,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
 }
 
-CORS_ALLOW_ALL_ORIGINS = True  # For development only
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -80,10 +71,13 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    "ngrok-skip-browser-warning",
 ]
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://192.168.0.181:5173",
+    "https://1c92a9c45456.ngrok-free.app",
 ]
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -103,7 +97,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'accounts.middleware.DebugAuthMiddleware',  # Debug middleware
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 USE_TZ = True
@@ -160,5 +154,6 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+INTERNAL_IPS = ['127.0.0.1']
