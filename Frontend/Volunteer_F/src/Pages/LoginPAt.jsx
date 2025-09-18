@@ -43,7 +43,7 @@ const PatientLogin = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/login/", {
+      const response = await fetch("https://1c92a9c45456.ngrok-free.app/api/login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password ,role: "patient"  }),

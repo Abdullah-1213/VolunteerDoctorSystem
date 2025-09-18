@@ -9,9 +9,7 @@ const MyAppointments = () => {
     const fetchAppointments = () => {
         const token = localStorage.getItem("access_token");
         console.log("Token before request:", token);
-        api.get('appointments/patient/', {
-            headers: { Authorization: `Bearer ${token}` }
-        })
+    api.get('appointments/patient/')
         .then(res => {
             console.log("Appointments response:", res.data);
             setAppointments(res.data);
@@ -25,7 +23,8 @@ const MyAppointments = () => {
             console.error("Error fetching appointments:", err.response?.data || err.message);
             setError("Failed to load appointments: " + (err.response?.data?.detail || err.message));
         });
-    };
+
+        };
 
     useEffect(() => {
         fetchAppointments();
@@ -57,6 +56,7 @@ const MyAppointments = () => {
                                     >
                                         Join Call
                                     </button>
+
                                 </div>
                             )}
                         </li>

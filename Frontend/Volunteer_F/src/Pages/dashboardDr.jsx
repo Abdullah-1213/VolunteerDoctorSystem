@@ -57,11 +57,26 @@ const DoctorDashboard = () => {
       navigate("/login");
     }
   }, [navigate]);
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    const role = localStorage.getItem("role");
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
-  };
+    if (!token || role !== "doctor") {
+      navigate("/login");
+    }
+  }, [navigate]);
+
+const handleLogout = () => {
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
+  localStorage.removeItem("user_id");
+  localStorage.removeItem("user_name");
+  localStorage.removeItem("user_email");
+  localStorage.removeItem("role");
+  localStorage.removeItem("doctor_data");
+  navigate("/login");
+};
+
 
   return (
     <div className="flex min-h-screen bg-gray-50">

@@ -19,6 +19,7 @@ const DoctorAppointments = () => {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
+        console.log("Appointments API response:", res.data); // 👈 add thi
         setAppointments(res.data);
         setError(null);
       })
@@ -101,12 +102,14 @@ const DoctorAppointments = () => {
               </p>
               {app.status === "approved" && (
                   <div className="mt-4">
-                      <button
-                          onClick={() => window.open(`/video-call/${app.id}`, "_blank")}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                      >
-                          Join Call
-                      </button>
+                    <button
+                        onClick={() => window.open(`/video-call/${app.id}`, "_blank")}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                    >
+                        Join Call
+                    </button>
+
+
                   </div>
               )}
 
