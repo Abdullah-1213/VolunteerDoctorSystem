@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  UserCircleIcon,
   CalendarIcon,
   ClipboardDocumentListIcon,
-  UserCircleIcon,
+  UserIcon,
   Bars3Icon,
   XMarkIcon,
+  ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
 
 import SetAvailability from "../Components/doctor/SetAvailability";
@@ -15,17 +17,20 @@ import DoctorAppointments from "../Components/doctor/DoctorAppointments";
 const sidebarItems = [
   {
     title: "Set Availability",
+    desc: "Manage your working hours",
     icon: CalendarIcon,
     key: "availability",
   },
   {
     title: "Available Slots",
+    desc: "View your free slots",
     icon: ClipboardDocumentListIcon,
     key: "slots",
   },
   {
     title: "Appointments",
-    icon: UserCircleIcon,
+    desc: "Check booked appointments",
+    icon: UserIcon,
     key: "appointments",
   },
 ];
@@ -47,101 +52,125 @@ const getDoctorInfo = () => {
 const DoctorDashboard = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("availability");
-
+  const [activeTab, setActiveTab] = useState(null); // default dashboard cards
   const doctorData = getDoctorInfo();
 
-  useEffect(() => {
-    // Basic check to redirect if no doctor data found
-    if (!localStorage.getItem("access_token") || !localStorage.getItem("user_name")) {
-      navigate("/login");
-    }
-  }, [navigate]);
+  // Auth check
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     const role = localStorage.getItem("role");
-
     if (!token || role !== "doctor") {
       navigate("/login");
     }
   }, [navigate]);
 
-const handleLogout = () => {
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("refresh_token");
-  localStorage.removeItem("user_id");
-  localStorage.removeItem("user_name");
-  localStorage.removeItem("user_email");
-  localStorage.removeItem("role");
-  localStorage.removeItem("doctor_data");
-  navigate("/login");
-};
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/login");
+  };
 
+  // Handle browser back button
+  useEffect(() => {
+    const handlePopState = () => {
+      setActiveTab(null); // back press → default dashboard
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 w-64 bg-white shadow-lg p-6 flex flex-col transition-transform duration-300 z-30
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-64"} lg:translate-x-0`}
+        className={`z-50 lg:w-64 w-64 bg-white shadow-lg p-5 h-screen fixed top-0 left-0 transition-transform duration-300 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-64"
+        } lg:translate-x-0`}
       >
+        {/* Close Button for Mobile */}
         <button
+          className="absolute top-5 right-5 lg:hidden"
           onClick={() => setSidebarOpen(false)}
-          className="lg:hidden self-end mb-8"
-          aria-label="Close sidebar"
         >
-          <XMarkIcon className="h-7 w-7 text-gray-500 hover:text-gray-700" />
+          <XMarkIcon className="h-6 w-6 text-gray-500" />
         </button>
 
-        <div className="text-center mb-10">
-          <UserCircleIcon className="mx-auto h-24 w-24 text-blue-400" />
-          <h2 className="mt-3 text-2xl font-bold text-gray-900">{doctorData.name}</h2>
-          <p className="text-gray-500">{doctorData.specialty}</p>
+        {/* Doctor Profile */}
+        <div className="text-center mt-10">
+          <UserCircleIcon className="h-20 w-20 mx-auto text-blue-500" />
+          <h2 className="text-lg font-semibold mt-2 text-gray-800">
+            {doctorData.name}
+          </h2>
+          <p className="text-sm text-gray-500">{doctorData.specialty}</p>
         </div>
 
-        <nav className="flex flex-col space-y-3 flex-grow">
-          {sidebarItems.map(({ title, icon: Icon, key }) => (
+        {/* Navigation */}
+        <nav className="mt-8 space-y-4">
+          {sidebarItems.map((item) => (
             <button
-              key={key}
-              onClick={() => setActiveTab(key)}
-              className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition
-                ${activeTab === key ? "bg-blue-200 text-blue-800 font-semibold" : ""}`}
+              key={item.key}
+              onClick={() => {
+                setActiveTab(item.key);
+                window.history.pushState({}, ""); // browser back support
+              }}
+              className={`flex items-center space-x-2 p-3 rounded-lg w-full transition-all shadow-sm ${
+                activeTab === item.key
+                  ? "bg-blue-200 text-blue-800 font-semibold"
+                  : "bg-white hover:bg-blue-100 text-gray-700"
+              }`}
             >
-              <Icon className="h-6 w-6" />
-              <span>{title}</span>
+              <item.icon className="h-6 w-6 text-blue-500" />
+              <span>{item.title}</span>
             </button>
           ))}
-        </nav>
 
-        <button
-          onClick={handleLogout}
-          className="mt-auto flex items-center space-x-3 px-4 py-3 bg-red-100 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition"
-        >
-          <XMarkIcon className="h-6 w-6" />
-          <span>Logout</span>
-        </button>
+          <button
+            onClick={handleLogout}
+            className="flex items-center space-x-2 p-3 bg-red-100 text-red-500 rounded-lg w-full transition-all hover:bg-red-500 hover:text-white"
+          >
+            <ArrowRightOnRectangleIcon className="h-6 w-6" />
+            <span>Logout</span>
+          </button>
+        </nav>
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen lg:ml-64 p-8 bg-gradient-to-r from-blue-50 to-gray-100">
-        {/* Mobile menu button */}
-        <button
-          className="lg:hidden mb-6 self-start"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Open sidebar"
-        >
-          <Bars3Icon className="h-7 w-7 text-gray-700 hover:text-gray-900" />
+      <div className="flex-1 flex flex-col min-h-screen lg:ml-64 px-6 py-10 bg-gradient-to-r from-blue-50 to-gray-100">
+        {/* Mobile Menu Button */}
+        <button className="lg:hidden mb-4" onClick={() => setSidebarOpen(true)}>
+          <Bars3Icon className="h-6 w-6 text-gray-700" />
         </button>
 
-        <h1 className="text-4xl font-extrabold mb-8 text-blue-800">
-          {sidebarItems.find((i) => i.key === activeTab)?.title || "Dashboard"}
-        </h1>
+        {/* If no tab selected -> show feature cards */}
+        {!activeTab && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mt-6">
+            {sidebarItems.map((item) => (
+              <div
+                key={item.key}
+                onClick={() => {
+                  setActiveTab(item.key);
+                  window.history.pushState({}, "");
+                }}
+                className="cursor-pointer rounded-2xl p-6 flex flex-col items-center justify-center transition-all shadow-md bg-white hover:shadow-xl hover:scale-105"
+              >
+                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+                  <item.icon className="h-8 w-8 text-blue-600" />
+                </div>
+                <h3 className="font-semibold text-gray-800">{item.title}</h3>
+                <p className="text-sm text-gray-500">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
-        <div className="bg-white rounded-3xl shadow-lg p-8 min-h-[400px] overflow-auto">
-          {activeTab === "availability" && <SetAvailability />}
-          {activeTab === "slots" && <FreeSlotsView />}
-          {activeTab === "appointments" && <DoctorAppointments />}
-        </div>
+        {/* If tab selected -> show component */}
+        {activeTab && (
+          <div className="bg-white rounded-3xl shadow-lg p-8 min-h-[400px] mt-6">
+            {activeTab === "availability" && <SetAvailability />}
+            {activeTab === "slots" && <FreeSlotsView />}
+            {activeTab === "appointments" && <DoctorAppointments />}
+          </div>
+        )}
       </div>
     </div>
   );

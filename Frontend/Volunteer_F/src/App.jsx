@@ -23,8 +23,8 @@ function App() {
            <Route path="/login/doctor" element={<Login />} />
            <Route path="/login/patient" element={<LoginPatient />} />
            <Route path="/signup/patient" element={<SignupPatient />} />
-           <Route path="/dashboard-dr" element={<DoctorDashboard />} />
-           <Route path="/dashboard-pt" element={<PatientDashboard />} />
+           <Route path="/dashboard-dr/*" element={<DoctorDashboard />} />
+           <Route path="/dashboard-pt/*" element={<PatientDashboard />} />
            <Route path="/video-call/:roomId" element={<VideoCall />} />
         </Routes>
       </Router>
