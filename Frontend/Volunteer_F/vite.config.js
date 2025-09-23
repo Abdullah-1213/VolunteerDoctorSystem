@@ -7,14 +7,15 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    mkcert(),   // ✅ keep mkcert for HTTPS locally
+     mkcert(),   // ✅ keep mkcert for HTTPS locally
   ],
   server: {
     https: true,  // ✅ force HTTPS
     host: '0.0.0.0',
     port: 5173,
+    strictPort: true,
     allowedHosts: [
-      'd0eeddd93c30.ngrok-free.app', // ✅ allow ngrok domain
+      '94a35e91e2a0.ngrok-free.app', // ✅ allow ngrok domain
       'localhost',
     ],
   },
