@@ -1,5 +1,7 @@
 {
   "buildCommand": "npm install && npm run build",
   "outputDirectory": "dist",
-  "rootDirectory": "Frontend/Volunteer_F"
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

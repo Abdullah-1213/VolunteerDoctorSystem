@@ -54,7 +54,7 @@ const SignupPatient = () => {
     if (Object.values(errors).some((err) => err)) return;
 
     try {
-      const response = await axios.post("http://localhost:8000/api/patient/signup/", {
+      const response = await axios.post("https://2efd97cb6034.ngrok-free.app/api/patient/signup/", {
         full_name: formData.full_name,
         email: formData.email,
         phone_number: formData.phone_number,

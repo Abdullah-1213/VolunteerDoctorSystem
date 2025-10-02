@@ -76,7 +76,7 @@ const DoctorSignup = () => {
     });
 
     try {
-      const response = await axios.post("https://d0eeddd93c30.ngrok-free.app/api/doctor/signup/", data, {
+      const response = await axios.post("https://2efd97cb6034.ngrok-free.app/api/doctor/signup/", data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       alert(response.data.message || "You signed up successfully! Wait for admin verification.");

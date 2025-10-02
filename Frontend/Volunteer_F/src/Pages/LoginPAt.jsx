@@ -43,7 +43,7 @@ const PatientLogin = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("https://2df08321545f.ngrok-free.app/api/login/", {
+      const response = await fetch("https://2efd97cb6034.ngrok-free.app/api/login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password ,role: "patient"  }),
@@ -59,6 +59,8 @@ const PatientLogin = () => {
         localStorage.setItem("user_name", data.name);
         localStorage.setItem("user_email", data.email);
         localStorage.setItem("role", data.role);
+        localStorage.setItem("patient", data.user_id);
+
 
         // Navigate according to role for safety, though this is patient login:
         if (data.role === "patient") {

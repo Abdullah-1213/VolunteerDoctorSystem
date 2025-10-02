@@ -5,72 +5,94 @@ const BookAppointment = ({ doctorId }) => {
   const [slots, setSlots] = useState([]);
   const [reason, setReason] = useState('');
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (doctorId) {
-      console.log("Fetching slots for doctor_id:", doctorId);
+      setLoading(true);
       api.get(`availability/?doctor_id=${doctorId}`)
         .then(res => {
-          console.log("Slots response:", res.data);
           setSlots(res.data);
-          if (res.data.length === 0) {
-            setError("No available slots for this doctor.");
-          } else {
-            setError(null);
-          }
+          setError(res.data.length === 0 ? "No available slots for this doctor." : null);
         })
         .catch(err => {
-          console.error("Error fetching slots:", err.response?.data || err.message);
           setError("Failed to load slots: " + (err.response?.data?.detail || err.message));
-        });
+        })
+        .finally(() => setLoading(false));
     }
   }, [doctorId]);
 
-const handleBook = async (slotId) => {
+  const handleBook = async (slotId) => {
     try {
-        const token = localStorage.getItem("access_token")
-        console.log("Authenticated user token:", token);
-        const payload = { slot_id: slotId, reason: reason };
+      const token = localStorage.getItem("access_token");
+      const payload = { slot_id: slotId, reason };
 
-        console.log("Sending booking payload:", payload);
-        await api.post('appointments/create/', payload, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        alert('Appointment booked successfully');
-        api.get(`availability/?doctor_id=${doctorId}`)
-            .then(res => {
-                console.log("Refreshed slots:", res.data);
-                setSlots(res.data);
-                if (res.data.length === 0) {
-                    setError("No available slots for this doctor.");
-                } else {
-                    setError(null);
-                }
-            })
-            .catch(err => console.error("Error refreshing slots:", err.response?.data || err.message));
+      await api.post('appointments/create/', payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      alert('✅ Appointment booked successfully');
+
+      const res = await api.get(`availability/?doctor_id=${doctorId}`);
+      setSlots(res.data);
+      setError(res.data.length === 0 ? "No available slots for this doctor." : null);
+
     } catch (err) {
-        console.error("Error booking appointment:", err.response?.data || err.message);
-        setError("Failed to book appointment: " + (err.response?.data?.detail || JSON.stringify(err.response?.data)));
+      setError("Failed to book appointment: " + (err.response?.data?.detail || JSON.stringify(err.response?.data)));
     }
-};
+  };
 
   return (
-    <div>
-      <h3>Available Slots</h3>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+    <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-2xl border border-green-200">
+      <h2 className="text-2xl font-bold text-center mb-4 text-green-600">
+        Book Appointment
+      </h2>
+
+      {error && (
+        <p className="text-red-500 text-center mb-4">{error}</p>
+      )}
+
       <input
+        type="text"
         placeholder="Reason for visit"
         value={reason}
         onChange={e => setReason(e.target.value)}
+        className="w-full mb-6 px-4 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-400 outline-none"
       />
-      <ul>
-        {slots.filter(s => !s.is_booked).map(slot => (
-          <li key={slot.id}>
-            {new Date(slot.start_time).toLocaleString()} - {new Date(slot.end_time).toLocaleString()}
-            <button onClick={() => handleBook(slot.id)}>Book</button>
-          </li>
-        ))}
-      </ul>
+
+      {loading ? (
+        <p className="text-center text-gray-500">Loading slots...</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {slots.filter(s => !s.is_booked).map(slot => (
+            <div
+              key={slot.id}
+              className="p-4 border rounded-lg shadow hover:shadow-md transition bg-green-50 flex flex-col justify-between"
+            >
+              <div>
+                <p className="text-gray-700 font-medium">
+                  {new Date(slot.start_time).toLocaleString()}
+                </p>
+                <p className="text-sm text-gray-500">
+                  to {new Date(slot.end_time).toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={() => handleBook(slot.id)}
+                className="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+              >
+                Book
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && slots.filter(s => !s.is_booked).length === 0 && !error && (
+        <p className="text-center text-gray-500 mt-4">
+          All slots are booked.
+        </p>
+      )}
     </div>
   );
 };

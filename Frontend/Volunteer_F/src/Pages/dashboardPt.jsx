@@ -9,6 +9,7 @@ import {
   ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
 import { Link, Routes, Route, useNavigate } from "react-router-dom";
+import MyPrescriptions from "../Components/patient/MyPrescriptions";
 
 import DoctorSearch from "../Components/patient/DoctorSearch";
 import BookAppointment from "../Components/patient/BookAppointment";
@@ -26,6 +27,12 @@ const sidebarItems = [
     desc: "View your booked appointments",
     icon: ClipboardDocumentListIcon,
     path: "appointments",
+  },
+  {
+    title: "My Prescriptions",
+    desc: "View prescriptions given by doctors",
+    icon: ClipboardDocumentListIcon, // ya koi aur icon jo pasand ho
+    path: "prescriptions",
   },
 ];
 
@@ -130,6 +137,7 @@ const PatientDashboard = () => {
                 ))}
               </div>
             }
+            
           />
 
           {/* Find Doctor & Book Appointment */}
@@ -154,6 +162,16 @@ const PatientDashboard = () => {
               </div>
             }
           />
+          
+              {/* Prescriptions */}
+            <Route
+              path="prescriptions"
+              element={
+                <div className="bg-white rounded-3xl shadow-lg p-8 min-h-[400px]">
+                  <MyPrescriptions />
+                </div>
+              }
+            />
         </Routes>
       </div>
     </div>
