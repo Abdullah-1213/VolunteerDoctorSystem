@@ -34,6 +34,21 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
             }
         )
 
+        # 🔹 Extra: if this user is a patient, notify doctors
+        if getattr(self.user, "role", None) == "patient":
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "signal_message",
+                    "message": {
+                        "type": "patient-joined",
+                        "patient_id": self.user.id,
+                        "patient_name": self.user.full_name,
+                    },
+                    "sender_channel": self.channel_name,
+                }
+            )
+
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
             self.room_group_name,

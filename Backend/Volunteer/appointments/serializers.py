@@ -26,10 +26,13 @@ class DoctorAvailabilitySerializer(serializers.ModelSerializer):
             'specialization': getattr(obj.doctor, 'specialization', None),
             'hospital_name': getattr(obj.doctor, 'hospital_name', None),
         }
-
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "full_name", "email", "role"]
 
 class AppointmentSerializer(serializers.ModelSerializer):
-    patient = serializers.PrimaryKeyRelatedField(read_only=True)  # read only here
+    patient =UserSerializer(read_only=True)  # read only here
     slot = DoctorAvailabilitySerializer(read_only=True)
     slot_id = serializers.PrimaryKeyRelatedField(
         queryset=DoctorAvailability.objects.filter(is_booked=False),

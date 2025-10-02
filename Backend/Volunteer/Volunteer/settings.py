@@ -7,6 +7,9 @@ SECRET_KEY = 'django-insecure-gbwkmfw8tlf45t&z@=t)%p&npsn3m)1dj6@um^uhxpcz-t#l4b
 DEBUG = True
 ALLOWED_HOSTS = ['localhost', '127.0.0.1','192.168.0.181',".ngrok-free.app"]
 AUTH_USER_MODEL = 'accounts.User'
+CSRF_TRUSTED_ORIGINS = [
+    "https://2efd97cb6034.ngrok-free.app"
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -17,6 +20,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'accounts',
     'appointments',
+    'prescription',
     'channels',
     'rest_framework',
     'rest_framework.authtoken',
@@ -46,6 +50,15 @@ REST_FRAMEWORK = {
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = []  # agar tumhare paas apna 'static/' folder nahi hai to empty rakho
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),  # Increased for testing
@@ -77,7 +90,7 @@ CORS_ALLOW_HEADERS = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://192.168.0.181:5173",
-    "https://1c92a9c45456.ngrok-free.app",
+    "https://2efd97cb6034.ngrok-free.app"
 ]
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -153,7 +166,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 INTERNAL_IPS = ['127.0.0.1']
