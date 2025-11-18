@@ -43,7 +43,7 @@ const DoctorLogin = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("https://2efd97cb6034.ngrok-free.app/api/login/", {
+      const response = await fetch("https://9478c91b2994.ngrok-free.app/api/login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password,role: "doctor"  }),

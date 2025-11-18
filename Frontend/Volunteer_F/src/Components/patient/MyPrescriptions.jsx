@@ -9,7 +9,7 @@ const MyPrescriptions = () => {
       try {
         const token = localStorage.getItem("access_token");
         const response = await fetch(
-          "https://2efd97cb6034.ngrok-free.app/api/prescriptions/",
+          "https://9478c91b2994.ngrok-free.app/api/prescriptions/",
           {
             headers: {
               "Authorization": `Bearer ${token}`,

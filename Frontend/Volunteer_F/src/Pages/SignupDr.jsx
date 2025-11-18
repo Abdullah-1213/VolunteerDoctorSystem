@@ -18,6 +18,22 @@ const DoctorSignup = () => {
   });
   const [formErrors, setFormErrors] = useState({});
 
+  const specializations = [
+    "General Physician",
+    "Cardiologist",
+    "Dermatologist",
+    "Dentist",
+    "Neurologist",
+    "Orthopedic Surgeon",
+    "Pediatrician",
+    "Psychiatrist",
+    "Gynecologist",
+    "ENT",
+    "Radiologist",
+    "Anesthesiologist",
+    "Oncologist",
+  ];
+
   const validateField = (name, value, updatedFormData = formData) => {
     switch (name) {
       case "full_name":
@@ -27,7 +43,7 @@ const DoctorSignup = () => {
       case "phone_number":
         return /^\d{11}$/.test(value) ? "" : "Phone number should be 11 digits.";
       case "specialization":
-        return /^[a-zA-Z\s]+$/.test(value) ? "" : "Specialization should contain only letters.";
+        return value ? "" : "Please select a specialization.";
       case "hospital_name":
         return value.trim() ? "" : "Hospital/Clinic name is required.";
       case "medical_license_number":
@@ -76,7 +92,7 @@ const DoctorSignup = () => {
     });
 
     try {
-      const response = await axios.post("https://2efd97cb6034.ngrok-free.app/api/doctor/signup/", data, {
+      const response = await axios.post("https://9478c91b2994.ngrok-free.app/api/doctor/signup/", data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       alert(response.data.message || "You signed up successfully! Wait for admin verification.");
@@ -93,6 +109,7 @@ const DoctorSignup = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-white to-gray-100 p-4">
       <div className="flex w-full max-w-5xl rounded-2xl shadow-xl bg-white overflow-hidden">
+        {/* Left Side */}
         <div className="hidden md:flex w-1/2 bg-gradient-to-b from-blue-600 to-blue-800 p-6 flex-col justify-between text-white">
           <div>
             <Link to="/" className="text-3xl font-extrabold">
@@ -105,58 +122,131 @@ const DoctorSignup = () => {
               Connect with patients and provide trusted care.
             </p>
             <div className="mt-6 flex justify-center">
-              <Lottie animationData={giffyAnimation} loop={true} style={{ width: 300, height: 300 }} />
+              <Lottie
+                animationData={giffyAnimation}
+                loop={true}
+                style={{ width: 300, height: 300 }}
+              />
             </div>
           </div>
           <div className="text-center">
-            <p className="text-yellow-300 text-sm font-medium">Your Health, Our Priority</p>
-            <p className="text-blue-200 text-xs mt-1">Empowering doctors to make a difference.</p>
+            <p className="text-yellow-300 text-sm font-medium">
+              Your Health, Our Priority
+            </p>
+            <p className="text-blue-200 text-xs mt-1">
+              Empowering doctors to make a difference.
+            </p>
           </div>
         </div>
+
+        {/* Right Side (Form) */}
         <div className="w-full md:w-1/2 p-6 flex items-center justify-center">
           <div className="w-full max-w-xl">
-            <h2 className="text-xl font-bold text-gray-800 text-center mb-3">Create Your Account</h2>
+            <h2 className="text-xl font-bold text-gray-800 text-center mb-3">
+              Create Your Account
+            </h2>
             <p className="text-center text-gray-600 mb-4 text-sm">
               Already have an account?{" "}
-              <Link to="/login/doctor" className="text-blue-600 font-semibold hover:underline">
+              <Link
+                to="/login/doctor"
+                className="text-blue-600 font-semibold hover:underline"
+              >
                 Log In
               </Link>
             </p>
+
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Dynamic Fields */}
               {[
                 { name: "full_name", type: "text", placeholder: "Full Name" },
                 { name: "email", type: "email", placeholder: "Email" },
                 { name: "phone_number", type: "text", placeholder: "Phone Number" },
-                { name: "specialization", type: "text", placeholder: "Specialization" },
                 { name: "hospital_name", type: "text", placeholder: "Hospital/Clinic" },
                 { name: "medical_license_number", type: "text", placeholder: "License Number" },
-                { name: "license_file", type: "file", placeholder: "Upload License" },
-                { name: "password", type: "password", placeholder: "Password" },
-                { name: "confirmPassword", type: "password", placeholder: "Confirm Password" },
               ].map((field) => (
-                <div
-                  key={field.name}
-                  className={`flex flex-col ${field.name === "license_file" ? "md:col-span-2" : ""}`}
-                >
+                <div key={field.name} className="flex flex-col">
                   <input
                     type={field.type}
                     name={field.name}
                     placeholder={field.placeholder}
-                    onChange={field.name === "license_file" ? handleFileChange : handleChange}
-                    className={`w-full p-2.5 border ${formErrors[field.name] ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm`}
+                    onChange={handleChange}
+                    className={`w-full p-2.5 border ${
+                      formErrors[field.name] ? "border-red-500" : "border-gray-300"
+                    } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm`}
                     required
-                    aria-invalid={formErrors[field.name] ? "true" : "false"}
-                    aria-describedby={formErrors[field.name] ? `${field.name}-error` : undefined}
                   />
-                  <div className="h-5">
-                    {formErrors[field.name] && (
-                      <p id={`${field.name}-error`} className="text-red-500 text-xs mt-1">
-                        {formErrors[field.name]}
-                      </p>
-                    )}
-                  </div>
+                  {formErrors[field.name] && (
+                    <p className="text-red-500 text-xs mt-1">{formErrors[field.name]}</p>
+                  )}
                 </div>
               ))}
+
+              {/* Specialization Dropdown */}
+              <div className="flex flex-col md:col-span-2">
+                <select
+                  name="specialization"
+                  value={formData.specialization}
+                  onChange={handleChange}
+                  className={`w-full p-2.5 border ${
+                    formErrors.specialization ? "border-red-500" : "border-gray-300"
+                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white`}
+                  required
+                >
+                  <option value="">Select Specialization</option>
+                  {specializations.map((spec) => (
+                    <option key={spec} value={spec}>
+                      {spec}
+                    </option>
+                  ))}
+                </select>
+                {formErrors.specialization && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {formErrors.specialization}
+                  </p>
+                )}
+              </div>
+
+              {/* File Upload */}
+              <div className="flex flex-col md:col-span-2">
+                <input
+                  type="file"
+                  name="license_file"
+                  onChange={handleFileChange}
+                  className={`w-full p-2.5 border ${
+                    formErrors.license_file ? "border-red-500" : "border-gray-300"
+                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm`}
+                  required
+                />
+                {formErrors.license_file && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {formErrors.license_file}
+                  </p>
+                )}
+              </div>
+
+              {/* Password Fields */}
+              {[
+                { name: "password", type: "password", placeholder: "Password" },
+                { name: "confirmPassword", type: "password", placeholder: "Confirm Password" },
+              ].map((field) => (
+                <div key={field.name} className="flex flex-col">
+                  <input
+                    type={field.type}
+                    name={field.name}
+                    placeholder={field.placeholder}
+                    onChange={handleChange}
+                    className={`w-full p-2.5 border ${
+                      formErrors[field.name] ? "border-red-500" : "border-gray-300"
+                    } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm`}
+                    required
+                  />
+                  {formErrors[field.name] && (
+                    <p className="text-red-500 text-xs mt-1">{formErrors[field.name]}</p>
+                  )}
+                </div>
+              ))}
+
+              {/* Submit Button */}
               <button
                 type="submit"
                 className="md:col-span-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 transition-all font-semibold text-sm mt-2"

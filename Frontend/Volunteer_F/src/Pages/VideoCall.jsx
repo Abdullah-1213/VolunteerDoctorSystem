@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Video, VideoOff, Mic, MicOff, Upload, Download } from "lucide-react";
+import { Video, VideoOff, Mic, MicOff, Upload, Download, Search } from "lucide-react"; // Added Search icon
 
 const VideoCall = () => {
   const { roomId } = useParams();
@@ -21,13 +21,94 @@ const VideoCall = () => {
   const [connectionStatus, setConnectionStatus] = useState("Connecting...");
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [prescriptionText, setPrescriptionText] = useState("");
+  // New state for drug search
+  const [showDrugSearchModal, setShowDrugSearchModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [drugData, setDrugData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [expandedDrugs, setExpandedDrugs] = useState(new Set());
 
-  const role = localStorage.getItem("role") || "patient"; // doctor / patient
+  const role = localStorage.getItem("role") || "patient";
 
-  // 🔑 Refresh Token
+  // Drug search logic from DrugSearch component
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    if (/^[a-zA-Z\s]*$/.test(value)) {
+      setSearchTerm(value);
+    }
+  };
+
+  const toggleExpand = (drugId) => {
+    const newExpanded = new Set(expandedDrugs);
+    if (newExpanded.has(drugId)) {
+      newExpanded.delete(drugId);
+    } else {
+      newExpanded.add(drugId);
+    }
+    setExpandedDrugs(newExpanded);
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchTerm.trim()) return;
+
+    setLoading(true);
+    setError(null);
+    setDrugData([]);
+
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `https://9478c91b2994.ngrok-free.app/api/drugs/search/?name=${encodeURIComponent(searchTerm)}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+            "ngrok-skip-browser-warning": "true",
+          },
+        }
+      );
+
+      if (response.status === 403) {
+        alert("Only doctors can access this feature.");
+        return;
+      }
+
+      if (!response.ok) throw new Error("Failed to fetch drugs");
+
+      const data = await response.json();
+      setDrugData(data);
+    } catch (error) {
+      console.error("Error:", error);
+      setError("Could not fetch drug data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // KeyInfo and CriticalInfo components for drug search UI
+  const KeyInfo = ({ label, value, icon: Icon, className = "" }) => (
+    <div className={`flex items-center space-x-2 text-sm ${className}`}>
+      <Icon className="w-4 h-4 text-gray-500" />
+      <span className="font-medium text-gray-700">{label}:</span>
+      <span className="text-gray-600">{value || "N/A"}</span>
+    </div>
+  );
+
+  const CriticalInfo = ({ label, value, icon: Icon, severity }) => (
+    <div className={`flex items-center space-x-2 text-sm p-2 rounded-lg ${severity === 'warning' ? 'bg-yellow-50 border border-yellow-200' : severity === 'danger' ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
+      <Icon className={`w-4 h-4 ${severity === 'warning' ? 'text-yellow-600' : severity === 'danger' ? 'text-red-600' : 'text-green-600'}`} />
+      <span className="font-semibold text-gray-800">{label}:</span>
+      <span className={`font-medium ${severity === 'warning' ? 'text-yellow-800' : severity === 'danger' ? 'text-red-800' : 'text-green-800'}`}>{value}</span>
+    </div>
+  );
+
+  // Existing refreshToken, connectWebSocket, initializeResources, toggleVideo, toggleAudio, handleEndCall, handleUploadPrescription, savePrescription, handleDownloadReports, handleUploadReports, handleDownloadPrescription functions remain unchanged
   const refreshToken = useCallback(async () => {
     try {
-      const response = await fetch("https://2efd97cb6034.ngrok-free.app/api/token/refresh/", {
+      const response = await fetch("https://9478c91b2994.ngrok-free.app/api/token/refresh/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -49,7 +130,6 @@ const VideoCall = () => {
     }
   }, []);
 
-  // 🔌 WebSocket Connection
   const connectWebSocket = useCallback(
     async (token) => {
       if (isConnectingRef.current || socketRef.current) return;
@@ -57,7 +137,7 @@ const VideoCall = () => {
 
       isConnectingRef.current = true;
       socketRef.current = new WebSocket(
-        `wss://2efd97cb6034.ngrok-free.app/ws/video/${roomId}/?token=${token}`
+        `wss://9478c91b2994.ngrok-free.app/ws/video/${roomId}/?token=${token}`
       );
 
       socketRef.current.onopen = () => {
@@ -85,15 +165,12 @@ const VideoCall = () => {
           await peerRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
         } else if (data.type === "ice") {
           await peerRef.current.addIceCandidate(data.candidate);
-        }
-
-        else if (data.type === "patient-joined" && role === "doctor") {
+        } else if (data.type === "patient-joined" && role === "doctor") {
           console.log("✅ Patient joined:", data);
           localStorage.setItem("current_patient_id", data.patient_id);
           localStorage.setItem("current_patient_name", data.patient_name);
           console.log("📌 Saved patient in localStorage:", data.patient_id);
         }
-
       };
 
       socketRef.current.onclose = () => {
@@ -105,7 +182,6 @@ const VideoCall = () => {
     [roomId, role]
   );
 
-  // 🎥 Init Media + Peer
   const initializeResources = useCallback(
     async () => {
       if (isMediaInitialized.current) return;
@@ -117,12 +193,11 @@ const VideoCall = () => {
           { urls: "stun:stun.l.google.com:19302" },
           {
             urls: "turn:relay1.expressturn.com:3480",
-            username: "000000002074380178",   // 👈 from your dashboard
-            credential: "xncHeT7f+wnsmVPfjYwo+8HCjwk=" // 👈 from your dashboard
+            username: "000000002074380178",
+            credential: "xncHeT7f+wnsmVPfjYwo+8HCjwk="
           }
         ]
       });
-
 
       peerRef.current.ontrack = (event) => {
         if (remoteVideoRef.current) {
@@ -152,39 +227,35 @@ const VideoCall = () => {
     [connectWebSocket, refreshToken]
   );
 
-  // Lifecycle
-// VideoCall.jsx me, useEffect me add karein
-useEffect(() => {
-  if (!roomId) return;
-  
-  // ✅ Set patient ID when component mounts
-  if (role === "patient") {
-    const userId = localStorage.getItem("user_id");
-    if (userId) {
-      localStorage.setItem("current_patient_id", userId);
-      console.log("✅ Patient ID set:", userId);
-    }
-  }
-  
-  // ✅ Clear patient ID when doctor enters (optional)
-  if (role === "doctor") {
-    console.log("👨‍⚕️ Doctor joined room:", roomId);
-  }
+  useEffect(() => {
+    if (!roomId) return;
 
-  isMountedRef.current = true;
-  initializeResources();
-
-  return () => {
-    isMountedRef.current = false;
-    if (socketRef.current) socketRef.current.close();
-    if (peerRef.current) peerRef.current.close();
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((t) => t.stop());
+    if (role === "patient") {
+      const userId = localStorage.getItem("user_id");
+      if (userId) {
+        localStorage.setItem("current_patient_id", userId);
+        console.log("✅ Patient ID set:", userId);
+      }
     }
-    isMediaInitialized.current = false;
-  };
-}, [roomId, initializeResources, role]); // ✅ Add 'role' dependency
-  // UI Toggles
+
+    if (role === "doctor") {
+      console.log("👨‍⚕️ Doctor joined room:", roomId);
+    }
+
+    isMountedRef.current = true;
+    initializeResources();
+
+    return () => {
+      isMountedRef.current = false;
+      if (socketRef.current) socketRef.current.close();
+      if (peerRef.current) peerRef.current.close();
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+      isMediaInitialized.current = false;
+    };
+  }, [roomId, initializeResources, role]);
+
   const toggleVideo = () => {
     if (localStreamRef.current) {
       localStreamRef.current.getVideoTracks().forEach((track) => {
@@ -203,8 +274,7 @@ useEffect(() => {
     }
   };
 
-    const handleEndCall = () => {
-    // Clean up resources before ending
+  const handleEndCall = () => {
     if (socketRef.current) {
       socketRef.current.close();
     }
@@ -214,10 +284,10 @@ useEffect(() => {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
     }
-    // Navigate back
     window.location.href = '/dashboard-dr';
   };
-const handleUploadPrescription = async () => {
+
+  const handleUploadPrescription = async () => {
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (err) {
@@ -245,8 +315,6 @@ const handleUploadPrescription = async () => {
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       console.log("📝 Prescription (speech-to-text):", transcript);
-
-      // ✅ Show modal with editable text
       setPrescriptionText(transcript);
       setShowPrescriptionModal(true);
     };
@@ -261,7 +329,6 @@ const handleUploadPrescription = async () => {
     };
   };
 
-  // ✅ Function to save prescription after edit
   const savePrescription = async () => {
     try {
       const token = localStorage.getItem("access_token");
@@ -272,7 +339,7 @@ const handleUploadPrescription = async () => {
         return;
       }
 
-      const response = await fetch("https://2efd97cb6034.ngrok-free.app/api/prescriptions/", {
+      const response = await fetch("https://9478c91b2994.ngrok-free.app/api/prescriptions/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -294,17 +361,15 @@ const handleUploadPrescription = async () => {
       }
 
       alert(`✅ Prescription saved:\n\n"${prescriptionText}"`);
-      setShowPrescriptionModal(false); // Close modal
+      setShowPrescriptionModal(false);
     } catch (err) {
       console.error("❌ Error saving prescription:", err);
       alert("Failed to save prescription. Check console for details.");
     }
   };
 
-
   const handleDownloadReports = () => {
     console.log('Downloading reports...');
-    // TODO: Implement actual download logic
     alert('Downloading patient reports...');
   };
 
@@ -317,69 +382,59 @@ const handleUploadPrescription = async () => {
       const files = Array.from(e.target.files);
       if (files.length > 0) {
         console.log('Uploading reports:', files.map(f => f.name));
-        // TODO: Implement actual upload logic
         alert(`${files.length} report(s) selected for upload`);
       }
     };
     input.click();
   };
 
-const handleDownloadPrescription = async () => {
-  try {
-    const token = localStorage.getItem("access_token");
-    const response = await fetch(
-      `https://2efd97cb6034.ngrok-free.app/api/prescriptions/?room_id=${roomId}`,
-      {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "ngrok-skip-browser-warning": "true",
-        },
+  const handleDownloadPrescription = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `https://9478c91b2994.ngrok-free.app/api/prescriptions/?room_id=${roomId}`,
+        {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "ngrok-skip-browser-warning": "true",
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch prescription");
+
+      const prescriptions = await response.json();
+      if (prescriptions.length === 0) {
+        alert("❌ No prescription found for this room.");
+        return;
       }
-    );
 
-    if (!response.ok) throw new Error("Failed to fetch prescription");
-
-    const prescriptions = await response.json();
-    if (prescriptions.length === 0) {
-      alert("❌ No prescription found for this room.");
-      return;
+      const latest = prescriptions[prescriptions.length - 1];
+      const content = `
+        Prescription ID: ${latest.id}
+        Date: ${new Date(latest.created_at).toLocaleString()}
+        Doctor: ${latest.doctor_name} (ID: ${latest.doctor})
+        Patient: ${latest.patient_name} (ID: ${latest.patient})
+        Room ID: ${latest.room_id}
+        ------------------------------
+        Prescription:
+        ${latest.text}
+        ------------------------------
+      `;
+      const blob = new Blob([content], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `prescription_${latest.id}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("❌ Failed to download prescription.");
     }
+  };
 
-    const latest = prescriptions[prescriptions.length - 1]; // last prescription
-
-    // ✅ Complete formatted prescription
-    const content = `
-      Prescription ID: ${latest.id}
-      Date: ${new Date(latest.created_at).toLocaleString()}
-
-      Doctor: ${latest.doctor_name} (ID: ${latest.doctor})
-      Patient: ${latest.patient_name} (ID: ${latest.patient})
-      Room ID: ${latest.room_id}
-
-      ------------------------------
-      Prescription:
-      ${latest.text}
-      ------------------------------
-          `;
-
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `prescription_${latest.id}.txt`; // unique filename
-    a.click();
-
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error(err);
-    alert("❌ Failed to download prescription.");
-  }
-};
-
-
-
- return (
+  return (
     <div className="h-screen w-full bg-gradient-to-br from-blue-50 to-blue-100 flex flex-col">
       {/* Top Bar */}
       <div className="bg-white shadow-md px-3 sm:px-6 py-2 sm:py-3 flex items-center justify-between border-b border-blue-200">
@@ -408,15 +463,12 @@ const handleDownloadPrescription = async () => {
 
       {/* Main Video Area */}
       <div className="flex-1 relative bg-gray-900 overflow-hidden">
-        {/* Remote Video */}
         <video 
           ref={remoteVideoRef} 
           autoPlay 
           playsInline 
           className="w-full h-full object-contain"
         />
-        
-        {/* Local Video (Picture-in-Picture) */}
         <div className="absolute top-3 right-3 sm:top-6 sm:right-6 w-24 h-32 sm:w-40 sm:h-32 md:w-64 md:h-48 bg-gray-900 rounded-lg overflow-hidden shadow-2xl border-2 border-blue-400 hover:border-blue-500 transition-all">
           <video 
             ref={localVideoRef} 
@@ -434,8 +486,6 @@ const handleDownloadPrescription = async () => {
             </div>
           )}
         </div>
-
-        {/* Error Message */}
         {mediaError && (
           <div className="absolute top-3 sm:top-6 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg shadow-lg text-xs sm:text-sm max-w-xs mx-3 text-center">
             {mediaError}
@@ -448,7 +498,6 @@ const handleDownloadPrescription = async () => {
         <div className="flex flex-col items-center gap-3">
           {/* Main Controls Row */}
           <div className="flex items-center justify-center gap-3 sm:gap-6">
-            {/* Audio Toggle with Label */}
             <div className="flex flex-col items-center gap-1.5">
               <button
                 onClick={toggleAudio}
@@ -465,8 +514,6 @@ const handleDownloadPrescription = async () => {
                 {audioEnabled ? "Mute" : "Unmute"}
               </span>
             </div>
-
-            {/* Video Toggle with Label */}
             <div className="flex flex-col items-center gap-1.5">
               <button
                 onClick={toggleVideo}
@@ -483,8 +530,6 @@ const handleDownloadPrescription = async () => {
                 {videoEnabled ? "Stop Video" : "Start Video"}
               </span>
             </div>
-
-            {/* End Call Button with Label */}
             <div className="flex flex-col items-center gap-1.5">
               <button
                 onClick={handleEndCall}
@@ -512,7 +557,6 @@ const handleDownloadPrescription = async () => {
                     <span className="sm:hidden">Upload Rx</span>
                   </button>
                 </div>
-
                 {/* Download Reports */}
                 <div className="flex flex-col items-center gap-1">
                   <button
@@ -525,10 +569,21 @@ const handleDownloadPrescription = async () => {
                     <span className="sm:hidden">Reports</span>
                   </button>
                 </div>
+                {/* Drug Search Button */}
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    onClick={() => setShowDrugSearchModal(true)}
+                    className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all shadow-md text-xs sm:text-sm font-medium"
+                    title="Search Drugs"
+                  >
+                    <Search size={16} className="sm:w-[18px] sm:h-[18px]" />
+                    <span className="hidden sm:inline">Search Drugs</span>
+                    <span className="sm:hidden">Drugs</span>
+                  </button>
+                </div>
               </>
             ) : (
               <>
-                {/* Upload Reports */}
                 <div className="flex flex-col items-center gap-1">
                   <button
                     onClick={handleUploadReports}
@@ -540,8 +595,6 @@ const handleDownloadPrescription = async () => {
                     <span className="sm:hidden">Upload</span>
                   </button>
                 </div>
-
-                {/* Download Prescription */}
                 <div className="flex flex-col items-center gap-1">
                   <button
                     onClick={handleDownloadPrescription}
@@ -586,62 +639,126 @@ const handleDownloadPrescription = async () => {
           </div>
         </div>
       )}
+
+      {/* Drug Search Modal */}
+      {showDrugSearchModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
+                <span>💊</span> Drug Search
+              </h2>
+              <button
+                onClick={() =>{
+                  setShowDrugSearchModal(false)
+                  setDrugData([]);
+                }} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleSearch} className="space-y-4 mb-6">
+              <input
+                value={searchTerm}
+                onChange={handleInputChange}
+                placeholder="Enter Drug Name (e.g., Aspirin)"
+                className="w-full rounded-lg border-blue-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition duration-200 text-sm py-2 px-3"
+              />
+              <button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-2 rounded-lg transition-all duration-200 shadow-lg text-sm"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Searching...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <Search size={16} />
+                    Search
+                  </span>
+                )}
+              </button>
+            </form>
+            {loading && (
+              <div className="text-center p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6">
+                <p className="text-blue-700 font-semibold flex items-center justify-center gap-2">
+                  <span className="text-lg">🔄</span>
+                  Searching...
+                </p>
+              </div>
+            )}
+            {error && (
+              <div className="text-center p-4 bg-red-50 border border-red-200 rounded-lg mb-6">
+                <p className="text-red-700 font-semibold flex items-center justify-center gap-2">
+                  <span className="text-lg">⚠️</span>
+                  {error}
+                </p>
+              </div>
+            )}
+            {drugData.length === 0 && !loading && searchTerm.trim() && (
+              <div className="text-center p-6 bg-gray-50 rounded-lg">
+                <p className="text-gray-500 font-medium flex items-center justify-center gap-2">
+                  <span className="text-lg">❌</span>
+                  No results found.
+                </p>
+              </div>
+            )}
+            {drugData.length > 0 && !loading && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-blue-900 flex items-center gap-2">
+                  Results ({drugData.length})
+                </h3>
+                {drugData.map((drug) => {
+                  const isExpanded = expandedDrugs.has(drug.id);
+                  const pregnancySeverity = drug.pregnancy_category === 'X' ? 'danger' : drug.pregnancy_category === 'D' ? 'warning' : 'info';
+                  const alcoholSeverity = drug.alcohol.includes('Major') ? 'danger' : drug.alcohol.includes('Moderate') ? 'warning' : 'info';
+                  return (
+                    <div key={drug.id} className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+                      <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50">
+                        <h4 className="text-lg font-bold text-blue-800 mb-2">{drug.drug_name}</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                          <KeyInfo label="Condition" value={drug.medical_condition} icon={({ className }) => <span className={className}>🩺</span>} />
+                          <KeyInfo label="Generic" value={drug.generic_name} icon={({ className }) => <span className={className}>💊</span>} />
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          <CriticalInfo
+                            label="Pregnancy"
+                            value={drug.pregnancy_category}
+                            icon={({ className }) => <span className={className}>👶</span>}
+                            severity={pregnancySeverity}
+                          />
+                          <CriticalInfo
+                            label="Alcohol"
+                            value={drug.alcohol}
+                            icon={({ className }) => <span className={className}>🍸</span>}
+                            severity={alcoholSeverity}
+                          />
+                        </div>
+                      </div>
+                      <div className="p-4 bg-red-50 border-t border-red-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-red-800 flex items-center gap-2">
+                            <span className="text-lg">⚠️</span>
+                            Side Effects
+                          </span>
+                        </div>
+                        <p className="text-sm text-red-700">{drug.side_effects}</p>
+                      </div>
+                      
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
-  // return (
-  //   <div className="max-w-6xl mx-auto p-6">
-  //     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-  //       {/* Video Area */}
-  //       <div className="col-span-2 relative bg-black rounded-xl overflow-hidden shadow-lg">
-  //         <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-[500px] object-cover" />
-  //         <div className="absolute bottom-4 right-4 w-32 h-24 bg-black/70 rounded-lg overflow-hidden border border-gray-700">
-  //           <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-  //         </div>
-  //         <div className="absolute top-4 left-4 text-white bg-black/50 px-3 py-1 rounded-md text-sm">
-  //           Room: {roomId}
-  //         </div>
-  //         <div className="absolute top-4 right-4 text-white bg-black/50 px-3 py-1 rounded-md text-sm">
-  //           Role: {role}
-  //         </div>
-  //       </div>
-
-  //       {/* Controls & Status */}
-  //       <div className="flex flex-col gap-4">
-  //         <div className="p-4 bg-gray-100 rounded-lg shadow">
-  //           <p className="text-gray-600 text-sm">Status</p>
-  //           <p className="font-semibold">{connectionStatus}</p>
-  //           {mediaError && <p className="text-red-500 text-sm mt-2">{mediaError}</p>}
-  //         </div>
-
-  //         <div className="p-4 bg-gray-100 rounded-lg shadow flex flex-col gap-3">
-  //           <button
-  //             onClick={toggleVideo}
-  //             className={`flex items-center justify-center gap-2 py-2 rounded-lg ${
-  //               videoEnabled ? "bg-indigo-600 text-white" : "bg-white border"
-  //             }`}
-  //           >
-  //             {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
-  //             {videoEnabled ? "Video On" : "Video Off"}
-  //           </button>
-
-  //           <button
-  //             onClick={toggleAudio}
-  //             className={`flex items-center justify-center gap-2 py-2 rounded-lg ${
-  //               audioEnabled ? "bg-indigo-600 text-white" : "bg-white border"
-  //             }`}
-  //           >
-  //             {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
-  //             {audioEnabled ? "Unmuted" : "Muted"}
-  //           </button>
-  //         </div>
-
-  //         <div className="p-4 bg-gray-100 rounded-lg text-xs text-gray-500">
-  //           This is a demo UI. In production, use TURN servers and secure token handling.
-  //         </div>
-  //       </div>
-  //     </div>
-  //   </div>
-  // );
 };
 
 export default VideoCall;
