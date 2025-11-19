@@ -6,7 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import IntegrityError
 from .serializers import DoctorSerializer, PatientSerializer, LoginSerializer
 from .models import User
-
+from otp.utils import send_otp
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
     return {
@@ -16,6 +16,8 @@ def get_tokens_for_user(user):
 
 class DoctorSignupView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []  # ❌ Disables JWT authentication
+
 
     def post(self, request):
         try:
@@ -29,16 +31,29 @@ class DoctorSignupView(APIView):
 
 class PatientSignupView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []  # ❌ Disables JWT authentication
+    
 
     def post(self, request):
         try:
             serializer = PatientSerializer(data=request.data)
+
             if serializer.is_valid():
                 patient = serializer.save()
-                return Response({"message": "Patient signed up successfully!"}, status=status.HTTP_201_CREATED)
+
+                # 🔥 Send OTP after signup
+                send_otp(patient)
+
+                return Response({
+                    "message": "Patient registered! OTP sent to email.",
+                    "user_id": patient.id
+                }, status=status.HTTP_201_CREATED)
+
             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
         except IntegrityError:
-            return Response({"error": "Patient with this email or phone already exists"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Patient with this email or phone already exists"},
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 class LoginView(APIView):

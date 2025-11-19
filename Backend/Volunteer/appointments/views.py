@@ -146,7 +146,18 @@ class DoctorListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        print(f"Fetching doctors for user: {self.request.user}")  # Debug
+        print(f"Fetching doctors for user: {self.request.user}")  # Debug log
+        
+        # Base queryset: all verified doctors
         queryset = User.objects.filter(role='doctor', is_verified=True)
-        print(f"Found doctors: {queryset}")  # Debug
+        
+        # Get specialization query parameter
+        specialization = self.request.query_params.get('specialization', None)
+
+        # If specialization provided, filter case-insensitively
+        if specialization:
+            queryset = queryset.filter(specialization__iexact=specialization)
+            print(f"Filtered by specialization: {specialization}")
+
+        print(f"Found doctors: {queryset}")  # Debug log
         return queryset

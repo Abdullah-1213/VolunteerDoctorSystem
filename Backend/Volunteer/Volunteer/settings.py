@@ -8,7 +8,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['localhost', '127.0.0.1','192.168.0.181',".ngrok-free.app"]
 AUTH_USER_MODEL = 'accounts.User'
 CSRF_TRUSTED_ORIGINS = [
-    "https://2efd97cb6034.ngrok-free.app"
+    "https://9478c91b2994.ngrok-free.app"
 ]
 
 INSTALLED_APPS = [
@@ -19,9 +19,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'accounts',
+    'drugs',
     'appointments',
     'prescription',
+    'patient',
+    'prediction',
     'channels',
+    'otp',
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
@@ -90,16 +94,18 @@ CORS_ALLOW_HEADERS = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://192.168.0.181:5173",
-    "https://2efd97cb6034.ngrok-free.app"
+    "https://9478c91b2994.ngrok-free.app"
 ]
+
+from decouple import config
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'abdullahjaved2750@gmail.com'
-EMAIL_HOST_PASSWORD = 'begd qebj kqwo kxyf'
-DEFAULT_FROM_EMAIL = 'abdullahjaved2750@gmail.com'
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
