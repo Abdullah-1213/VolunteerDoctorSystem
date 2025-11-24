@@ -43,7 +43,7 @@ const DoctorLogin = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("https://9478c91b2994.ngrok-free.app/api/login/", {
+      const response = await fetch("http://127.0.0.1:8000/api/login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password,role: "doctor"  }),
@@ -101,7 +101,7 @@ const DoctorLogin = () => {
           <div className="hidden md:flex w-1/2 bg-gradient-to-b from-blue-600 to-blue-800 p-6 flex-col justify-between text-white">
             <div>
               <Link to="/" className="text-3xl font-extrabold">
-                Volunteer Doctor<span className="text-yellow-300">System</span>
+                Doctor<span className="text-yellow-300">Help</span>
               </Link>
               <h1 className="text-xl font-semibold mt-10 text-white">
                 Welcome Back to Volunteer Doctor System

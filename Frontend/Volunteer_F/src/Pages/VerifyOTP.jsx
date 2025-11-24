@@ -11,7 +11,7 @@ const VerifyOTP = () => {
 
   const handleVerify = async () => {
     try {
-      const res = await axios.post("https://9478c91b2994.ngrok-free.app/api/otp/verify/", { user_id, otp });
+      const res = await axios.post("http://127.0.0.1:8000/api/otp/verify/", { user_id, otp });
       setMessage(res.data.message);
     }catch (err) {
       setMessage(err.response?.data?.error || "Something went wrong");

@@ -7,17 +7,30 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-     mkcert(),   // ✅ keep mkcert for HTTPS locally
+    mkcert(),
   ],
   server: {
-    https: true,  // ✅ force HTTPS
+    https: false,
     host: '0.0.0.0',
     port: 5173,
     strictPort: true,
     allowedHosts: [
-      '9478c91b2994.ngrok-free.app', // ✅ allow ngrok domain
+      'b44141080129.ngrok-free.app',
       '127.0.0.1:8000',
       'localhost',
     ],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            return 'vendor'; // put all node_modules into vendor chunk
+          }
+        },
+        chunkFileNames: 'assets/[name]-[hash].js'
+      }
+    },
+    chunkSizeWarningLimit: 2000 // optional, increase warning limit if needed
+  }
 })

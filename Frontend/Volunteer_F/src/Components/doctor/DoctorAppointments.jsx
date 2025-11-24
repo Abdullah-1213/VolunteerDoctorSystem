@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
-import { CalendarClock, User, AlertCircle, Video } from "lucide-react";
+import { CalendarClock, User, AlertCircle, Video, ChevronDown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-const DoctorAppointments = () => {
+const DoctorAppointments = ({app}) => {
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
+  const [filtered, setFiltered] = useState([]);
+  const [activeFilter, setActiveFilter] = useState("all");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Fetch appointments from API
-  const fetchAppointments = () => {
+  const fetchAppointments = async () => {
     const token = localStorage.getItem("access_token");
     if (!token) {
       setError("You must be logged in.");
@@ -17,53 +20,60 @@ const DoctorAppointments = () => {
 
     setLoading(true);
 
-    api
-      .get("appointments/doctor/", {
+    try {
+      const res = await api.get("appointments/doctor/", {
         headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        // Sort newest first
-        const sorted = [...res.data].sort((a, b) => {
-          const timeA = new Date(a?.slot?.start_time || 0).getTime();
-          const timeB = new Date(b?.slot?.start_time || 0).getTime();
-          return timeB - timeA;
-        });
+      });
 
-        setAppointments(sorted);
-        setError(null);
-      })
-      .catch((err) => {
-        setError(
-          "Failed to fetch appointments: " +
-            (err.response?.data?.detail || err.message)
-        );
-      })
-      .finally(() => setLoading(false));
+      const sorted = [...res.data].sort((a, b) => {
+        return new Date(b?.slot?.start_time) - new Date(a?.slot?.start_time);
+      });
+
+      setAppointments(sorted);
+      setFiltered(sorted);
+      setError(null);
+    } catch (err) {
+      setError(
+        "Failed to fetch appointments: " +
+          (err.response?.data?.detail || err.message)
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchAppointments();
   }, []);
 
-  // Automatically mark completed if appointment ended
-  useEffect(() => {
-    const interval = setInterval(() => {
-      appointments.forEach((app) => {
-        const endTime = app.slot?.end_time ? new Date(app.slot.end_time) : null;
-        const now = new Date();
-        if (endTime && now > endTime && app.status === "approved") {
-          updateStatus(app.id, "completed");
-        }
-      });
-    }, 60000); // check every 1 minute
+  const applyFilter = (filter) => {
+    setActiveFilter(filter);
+    const now = new Date();
+    let data = [...appointments];
 
-    return () => clearInterval(interval);
-  }, [appointments]);
+    if (filter === "today") {
+      data = data.filter(
+        (app) =>
+          new Date(app.slot.start_time).toDateString() === now.toDateString()
+      );
+    }
+    if (filter === "upcoming") {
+      data = data.filter((app) => new Date(app.slot.start_time) > now);
+    }
+    if (filter === "completed") {
+      data = data.filter((app) => app.status === "completed");
+    }
+    if (filter === "cancelled") {
+      data = data.filter((app) =>
+        ["cancelled", "rejected"].includes(app.status)
+      );
+    }
 
-  // Update appointment status API
+    setFiltered(data);
+  };
+
   const updateStatus = async (appointmentId, newStatus) => {
     const token = localStorage.getItem("access_token");
-
     try {
       await api.patch(
         `appointments/${appointmentId}/update-status/`,
@@ -72,125 +82,162 @@ const DoctorAppointments = () => {
       );
       fetchAppointments();
     } catch (err) {
-      alert(
-        "Failed to update status: " +
-          (err.response?.data?.detail || err.message)
-      );
+      console.error("Failed to update status:", err);
     }
   };
 
-  // STATUS BADGE STYLE
   const statusBadge = (status) => {
     const colors = {
-      approved: "bg-green-100 text-green-700",
+      confirmed: "bg-green-100 text-green-700",
       rejected: "bg-red-100 text-red-700",
       pending: "bg-yellow-100 text-yellow-700",
       completed: "bg-gray-100 text-gray-700",
+      cancelled: "bg-gray-300 text-gray-700",
     };
-    return `px-3 py-1 rounded-full text-sm font-medium ${colors[status] || colors.completed}`;
+    return `px-2.5 py-1 rounded-full text-xs font-medium ${colors[status] || colors.completed}`;
   };
 
+  const filters = [
+    { value: "all", label: "All" },
+    { value: "today", label: "Today" },
+    { value: "upcoming", label: "Upcoming" },
+    { value: "completed", label: "Completed" },
+    { value: "cancelled", label: "Cancelled" },
+  ];
+
   return (
-    <div className="max-w-3xl mx-auto mt-6 font-sans">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">
-        Your Appointments
-      </h2>
-
-      {error && (
-        <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-4 flex items-center gap-2">
-          <AlertCircle size={18} />
-          {error}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+        {/* Header */}
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
+            Your Appointments
+          </h2>
+          <p className="text-md text-gray-600">Manage your patient appointments</p>
         </div>
-      )}
 
-      {loading && (
-        <p className="text-gray-600 italic mb-4">Loading appointments...</p>
-      )}
-
-      {!loading && appointments.length === 0 && (
-        <p className="text-gray-500 italic">No appointments found.</p>
-      )}
-
-      <ul className="space-y-4">
-        {appointments.map((app) => {
-          const patientName = app.patient?.full_name || "Unknown Patient";
-          const startTime = app.slot?.start_time
-            ? new Date(app.slot.start_time).toLocaleString()
-            : "N/A";
-          const endTime = app.slot?.end_time ? new Date(app.slot.end_time) : null;
-          const now = new Date();
-
-          // Check if appointment is currently live
-          const isLive =
-            endTime &&
-            app.status === "approved" &&
-            now >= new Date(app.slot.start_time) &&
-            now <= endTime;
-
-          return (
-            <li
-              key={app.id}
-              className="bg-white border border-gray-200 rounded-xl shadow-md p-5 hover:shadow-lg transition-all"
+        {/* FILTER DROPDOWN */}
+        <div className="mb-4 sm:mb-6">
+          <div className="relative">
+            <select
+              value={activeFilter}
+              onChange={(e) => applyFilter(e.target.value)}
+              className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 pr-10 text-md font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
             >
-              {/* Top Header */}
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2">
-                  <User className="text-blue-600" size={20} />
-                  <span className="font-semibold text-gray-800">{patientName}</span>
+              {filters.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" size={20} />
+          </div>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg mb-4 sm:mb-6 flex items-start gap-3">
+            <AlertCircle size={20} className="shrink-0 mt-0.5" />
+            <span className="text-md">{error}</span>
+          </div>
+        )}
+
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
+            <p className="text-gray-600 ml-3 font-medium">Loading...</p>
+          </div>
+        )}
+
+        {!loading && filtered.length === 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+            <div className="text-gray-400 mb-3">
+              <CalendarClock size={48} className="mx-auto" />
+            </div>
+            <p className="text-gray-500 font-medium">No matching appointments</p>
+            <p className="text-md text-gray-400 mt-1">Try changing the filter</p>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {filtered.map((app) => {
+            const patientName = app.patient?.full_name || "Unknown Patient";
+            const startTime = app.slot?.start_time
+              ? new Date(app.slot.start_time).toLocaleString()
+              : "N/A";
+            const endTime = app.slot?.end_time ? new Date(app.slot.end_time) : null;
+            const now = new Date();
+
+            const isLive =
+              endTime &&
+              app.status === "confirmed" &&
+              now >= new Date(app.slot.start_time) &&
+              now <= endTime;
+
+            return (
+              <div
+                key={app.id}
+                className="bg-white rounded-lg shadow-sm border border-gray-200 p-3"
+              >
+                {/* Patient Name & Status */}
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <User className="text-blue-600 shrink-0" size={18} />
+                    <span className="font-semibold text-gray-900 text-sm truncate">
+                      {patientName}
+                    </span>
+                  </div>
+                  <span className={statusBadge(app.status)}>
+                    {app.status.toUpperCase()}
+                  </span>
                 </div>
-                <span className={statusBadge(app.status)}>
-                  {app.status.toUpperCase()}
-                </span>
-              </div>
 
-              {/* Appointment Details */}
-              <div className="space-y-2 text-gray-700">
-                <p className="flex items-center gap-2">
-                  <CalendarClock size={18} className="text-purple-600" />
-                  <span className="font-medium">Time:</span> {startTime}
-                </p>
-                <p>
+                {/* Time */}
+                <div className="flex items-start gap-2 mb-1 text-md text-gray-600">
+                  <CalendarClock size={14} className="text-purple-600 shrink-0 mt-0.5" />
+                  <span className="break-words">{startTime}</span>
+                </div>
+
+                {/* Reason */}
+                <div className="text-md text-gray-600 mb-3 pl-5">
                   <span className="font-medium">Reason:</span> {app.reason || "N/A"}
-                </p>
-              </div>
+                </div>
 
-              {/* Action Buttons */}
-              <div className="mt-4 flex flex-wrap gap-3">
-                {/* Join Call - only if approved AND currently live */}
-                {isLive && (
+                {/* Action Buttons */}
+                {(isLive || app.status === "pending") && (
+                  <div className="flex gap-2 pt-2 border-t border-gray-100">
+                    {isLive && (
                   <button
-                    onClick={() =>
-                      window.open(`/video-call/${app.id}`, "_blank")
-                    }
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
+                    onClick={() => navigate(`/video-call/${app.id}`)}
+                    className="flex items-center justify-center gap-1.5 flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-md font-medium hover:bg-blue-700 transition"
                   >
-                    <Video size={18} />
+                    <Video size={14} />
                     Join Call
                   </button>
-                )}
+                    )}
 
-                {/* Pending Approve/Reject */}
-                {app.status === "pending" && (
-                  <>
-                    <button
-                      onClick={() => updateStatus(app.id, "approved")}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => updateStatus(app.id, "rejected")}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition shadow"
-                    >
-                      Reject
-                    </button>
-                  </>
+                    {app.status === "pending" && (
+                      <>
+                        <button
+                          onClick={() => updateStatus(app.id, "confirmed")}
+                          className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-md font-medium hover:bg-green-700 transition"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => updateStatus(app.id, "cancelled")}
+                          className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-md font-medium hover:bg-red-700 transition"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
-            </li>
-          );
-        })}
-      </ul>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };

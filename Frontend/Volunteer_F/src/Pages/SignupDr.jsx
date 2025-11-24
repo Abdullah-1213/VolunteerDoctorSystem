@@ -92,7 +92,7 @@ const DoctorSignup = () => {
     });
 
     try {
-      const response = await axios.post("https://9478c91b2994.ngrok-free.app/api/doctor/signup/", data, {
+      const response = await axios.post("http://127.0.0.1:8000/api/doctor/signup/", data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       alert(response.data.message || "You signed up successfully! Wait for admin verification.");
@@ -113,7 +113,7 @@ const DoctorSignup = () => {
         <div className="hidden md:flex w-1/2 bg-gradient-to-b from-blue-600 to-blue-800 p-6 flex-col justify-between text-white">
           <div>
             <Link to="/" className="text-3xl font-extrabold">
-              Volunteer Doctor<span className="text-yellow-300">System</span>
+              Doctor<span className="text-yellow-300">Help</span>
             </Link>
             <h1 className="text-xl font-semibold mt-10 text-white">
               Join Our Doctor's Platform

@@ -93,7 +93,7 @@ const SignupPatient = () => {
 
   const handleVerifyOtp = async () => {
     try {
-      const res = await axios.post("https://9478c91b2994.ngrok-free.app/api/otp/verify/", {
+      const res = await axios.post("http://127.0.0.1:8000/api/otp/verify/", {
         user_id: userId,
         otp,
       });
@@ -116,7 +116,7 @@ const SignupPatient = () => {
         <div className="hidden md:flex w-1/2 bg-gradient-to-b from-green-600 to-green-800 p-6 flex-col justify-between text-white">
           <div>
             <Link to="/" className="text-3xl font-extrabold">
-              Volunteer <span className="text-yellow-300">System</span>
+              Doctor<span className="text-yellow-300">Help</span>
             </Link>
             <h1 className="text-xl font-semibold mt-10 text-white">Join as a Patient</h1>
             <p className="mt-2 text-green-100 text-xs">Connect with trusted doctors and get better care.</p>

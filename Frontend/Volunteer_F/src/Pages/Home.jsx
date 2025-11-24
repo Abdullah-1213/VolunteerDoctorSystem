@@ -9,7 +9,9 @@ const Home = () => {
     <>
     
       <Navbar />
-      <WebBanner/>
+      <div className="pt-20">
+        <WebBanner />
+      </div>
       <FeatureSection/>
       <Footer/>
     </>

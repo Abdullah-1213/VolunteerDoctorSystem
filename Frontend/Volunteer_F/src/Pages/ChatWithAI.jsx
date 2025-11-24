@@ -72,7 +72,7 @@ export default function ChatWithAI() {
   };
 
   return (
-    <div className="flex flex-col h-[75vh] max-w-3xl mx-auto p-4 bg-white rounded-2xl shadow-lg border border-gray-200">
+    <div className="flex flex-col h-[75vh] w-full max-w-3xl mx-auto p-2 sm:p-4 bg-white rounded-2xl shadow-lg border border-gray-200">
       {/* Header */}
       <h2 className="text-2xl font-bold text-center text-blue-700 mb-4 flex items-center justify-center space-x-2">
         <span>💬</span>
@@ -80,7 +80,8 @@ export default function ChatWithAI() {
       </h2>
 
       {/* Chat Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 rounded-lg border border-gray-200">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 bg-gray-50 rounded-lg border border-gray-200">
+
         <AnimatePresence>
           {chats.map((chat, idx) => (
             <motion.div
@@ -88,7 +89,7 @@ export default function ChatWithAI() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className={`max-w-[80%] p-3 rounded-xl break-words shadow ${
+              className={`max-w-[85%] sm:max-w-[80%] p-3 rounded-xl break-words overflow-hidden shadow ${
                 chat.sender === "Doctor"
                   ? "bg-blue-500 text-white self-start"
                   : "bg-gray-200 text-gray-900 self-end"
@@ -119,8 +120,7 @@ export default function ChatWithAI() {
           onKeyDown={handleKeyPress}
           placeholder="Type your question..."
           disabled={loading}
-          className="flex-1 p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 resize-none h-12"
-        />
+          className="flex-1 p-2 sm:p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 resize-none h-12 text-sm sm:text-base"        />
         <button
           onClick={handleSend}
           disabled={loading}

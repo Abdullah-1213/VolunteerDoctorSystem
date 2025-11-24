@@ -60,7 +60,7 @@ const VideoCall = () => {
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
-        `https://9478c91b2994.ngrok-free.app/api/drugs/search/?name=${encodeURIComponent(searchTerm)}`,
+        `https://b44141080129.ngrok-free.app/api/drugs/search/?name=${encodeURIComponent(searchTerm)}`,
         {
           method: "GET",
           headers: {
@@ -108,7 +108,7 @@ const VideoCall = () => {
   // Existing refreshToken, connectWebSocket, initializeResources, toggleVideo, toggleAudio, handleEndCall, handleUploadPrescription, savePrescription, handleDownloadReports, handleUploadReports, handleDownloadPrescription functions remain unchanged
   const refreshToken = useCallback(async () => {
     try {
-      const response = await fetch("https://9478c91b2994.ngrok-free.app/api/token/refresh/", {
+      const response = await fetch("https://b44141080129.ngrok-free.app/api/token/refresh/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -137,7 +137,7 @@ const VideoCall = () => {
 
       isConnectingRef.current = true;
       socketRef.current = new WebSocket(
-        `wss://9478c91b2994.ngrok-free.app/ws/video/${roomId}/?token=${token}`
+        `wss://b44141080129.ngrok-free.app/ws/video/${roomId}/?token=${token}`
       );
 
       socketRef.current.onopen = () => {
@@ -339,7 +339,7 @@ const VideoCall = () => {
         return;
       }
 
-      const response = await fetch("https://9478c91b2994.ngrok-free.app/api/prescriptions/", {
+      const response = await fetch("https://b44141080129.ngrok-free.app/api/prescriptions/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -392,7 +392,7 @@ const VideoCall = () => {
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
-        `https://9478c91b2994.ngrok-free.app/api/prescriptions/?room_id=${roomId}`,
+        `https://b44141080129.ngrok-free.app/api/prescriptions/?room_id=${roomId}`,
         {
           headers: {
             "Authorization": `Bearer ${token}`,

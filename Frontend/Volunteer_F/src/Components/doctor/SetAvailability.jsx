@@ -86,21 +86,33 @@ const SetAvailability = () => {
   };
 
   return (
-    <div className="max-w-xl mx-auto bg-white shadow-lg rounded-2xl p-8 mt-6 border border-gray-200">
-      <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
+    <div
+      className="
+      max-w-xl mx-auto mt-5 sm:mt-8 
+      bg-white shadow-lg rounded-2xl 
+      p-5 sm:p-8 
+      border border-gray-200
+      w-full
+      "
+    >
+      <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-6 text-center">
         Set Your Availability
       </h2>
 
       {error && (
-        <p className="text-red-600 font-semibold mb-4 text-center bg-red-100 p-2 rounded-lg">
+        <p className="text-red-600 font-semibold mb-4 text-center bg-red-100 p-2 rounded-lg text-sm sm:text-base">
           {error}
         </p>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
+        
         {/* Date */}
-        <div className="flex flex-col">
-          <label htmlFor="date" className="mb-1 font-medium text-gray-700 flex items-center gap-2">
+        <div className="flex flex-col w-full">
+          <label
+            htmlFor="date"
+            className="mb-1 font-medium text-gray-700 flex items-center gap-2 text-sm sm:text-base"
+          >
             <Calendar size={18} className="text-blue-600" />
             Select Date
           </label>
@@ -111,13 +123,22 @@ const SetAvailability = () => {
             value={formData.date}
             onChange={handleChange}
             required
-            className="border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+            className="
+            border border-gray-300 rounded-lg 
+            px-4 py-2.5 
+            focus:outline-none focus:ring-2 focus:ring-blue-400 
+            transition
+            text-sm sm:text-base
+            "
           />
         </div>
 
         {/* Start Time */}
-        <div className="flex flex-col">
-          <label htmlFor="start_time" className="mb-1 font-medium text-gray-700 flex items-center gap-2">
+        <div className="flex flex-col w-full">
+          <label
+            htmlFor="start_time"
+            className="mb-1 font-medium text-gray-700 flex items-center gap-2 text-sm sm:text-base"
+          >
             <Clock size={18} className="text-green-600" />
             Start Time
           </label>
@@ -128,13 +149,22 @@ const SetAvailability = () => {
             value={formData.start_time}
             onChange={handleChange}
             required
-            className="border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+            className="
+            border border-gray-300 rounded-lg 
+            px-4 py-2.5 
+            focus:outline-none focus:ring-2 focus:ring-green-400 
+            transition
+            text-sm sm:text-base
+            "
           />
         </div>
 
         {/* End Time */}
-        <div className="flex flex-col">
-          <label htmlFor="end_time" className="mb-1 font-medium text-gray-700 flex items-center gap-2">
+        <div className="flex flex-col w-full">
+          <label
+            htmlFor="end_time"
+            className="mb-1 font-medium text-gray-700 flex items-center gap-2 text-sm sm:text-base"
+          >
             <Clock size={18} className="text-red-600" />
             End Time
           </label>
@@ -145,13 +175,22 @@ const SetAvailability = () => {
             value={formData.end_time}
             onChange={handleChange}
             required
-            className="border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-400 transition"
+            className="
+            border border-gray-300 rounded-lg 
+            px-4 py-2.5 
+            focus:outline-none focus:ring-2 focus:ring-red-400 
+            transition
+            text-sm sm:text-base
+            "
           />
         </div>
 
         {/* Slot Duration */}
-        <div className="flex flex-col">
-          <label htmlFor="slot_duration" className="mb-1 font-medium text-gray-700 flex items-center gap-2">
+        <div className="flex flex-col w-full">
+          <label
+            htmlFor="slot_duration"
+            className="mb-1 font-medium text-gray-700 flex items-center gap-2 text-sm sm:text-base"
+          >
             <Timer size={18} className="text-purple-600" />
             Slot Duration (minutes)
           </label>
@@ -163,14 +202,24 @@ const SetAvailability = () => {
             onChange={handleChange}
             min="5"
             required
-            className="border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
+            className="
+            border border-gray-300 rounded-lg 
+            px-4 py-2.5 
+            focus:outline-none focus:ring-2 focus:ring-purple-400 
+            transition
+            text-sm sm:text-base
+            "
           />
         </div>
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg 
-          hover:bg-blue-700 shadow-md hover:shadow-lg transition-all text-lg"
+          className="
+          w-full bg-blue-600 text-white font-semibold py-3 rounded-lg 
+          hover:bg-blue-700 shadow-md hover:shadow-lg 
+          transition-all 
+          text-base sm:text-lg
+          "
         >
           Save Availability
         </button>

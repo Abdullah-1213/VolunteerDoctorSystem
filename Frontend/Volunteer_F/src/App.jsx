@@ -48,7 +48,7 @@ import BookAppointment from './Components/patient/BookAppointment';
 import MyAppointments from './Components/patient/MyAppointments';
 import DrugSearch from './Pages/DrugSearch';
 import HighRiskPregnancyPrediction from './Pages/PregnancyPrediction';
-import VerifyOTP from './Pages/VerifyOtp';
+import VerifyOTP from "./Pages/VerifyOTP";
 import { Toaster } from "react-hot-toast";
 function App() {
   return (

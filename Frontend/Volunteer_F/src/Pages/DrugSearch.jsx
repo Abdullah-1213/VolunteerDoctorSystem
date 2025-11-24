@@ -51,7 +51,7 @@ export default function DrugSearch() {
       console.log("Headers being sent:", headers);
 
       const response = await fetch(
-        `https://9478c91b2994.ngrok-free.app/api/drugs/search?name=${encodeURIComponent(trimmedTerm)}`,
+        `http://127.0.0.1:8000/api/drugs/search?name=${encodeURIComponent(trimmedTerm)}`,
         { method: "GET", headers }
       );
 
@@ -118,7 +118,7 @@ export default function DrugSearch() {
     <div className="w-full max-w-4xl mx-auto mt-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-xl border border-blue-200">
       <h2 className="text-3xl font-bold text-center text-blue-900 mb-6 flex items-center justify-center space-x-2">
         <span className="text-4xl">💊</span>
-        <span>Drug Search</span>
+        
       </h2>
 
       <form onSubmit={handleSearch} className="space-y-4 mb-6">
