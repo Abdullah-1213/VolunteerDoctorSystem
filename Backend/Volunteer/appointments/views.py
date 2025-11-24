@@ -27,17 +27,21 @@ class AppointmentStatusUpdateView(APIView):
         except Appointment.DoesNotExist:
             return Response({"detail": "Appointment not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Only doctor of this appointment can update the status
         if appointment.doctor != request.user:
             return Response({"detail": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
 
         new_status = request.data.get("status")
-        if new_status not in ["pending", "approved", "rejected"]:
+
+        allowed_statuses = ["pending", "confirmed", "completed", "cancelled"]
+
+        if new_status not in allowed_statuses:
             return Response({"detail": "Invalid status."}, status=status.HTTP_400_BAD_REQUEST)
 
         appointment.status = new_status
         appointment.save()
+
         return Response({"detail": "Status updated successfully."}, status=status.HTTP_200_OK)
+
 # Doctor manually creates one availability slot
 class DoctorAvailabilityCreateView(generics.CreateAPIView):
     queryset = DoctorAvailability.objects.all()

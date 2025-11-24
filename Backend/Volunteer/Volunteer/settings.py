@@ -8,7 +8,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['localhost', '127.0.0.1','192.168.0.181',".ngrok-free.app"]
 AUTH_USER_MODEL = 'accounts.User'
 CSRF_TRUSTED_ORIGINS = [
-    "https://9478c91b2994.ngrok-free.app"
+    "https://b44141080129.ngrok-free.app"
 ]
 
 INSTALLED_APPS = [
@@ -94,7 +94,7 @@ CORS_ALLOW_HEADERS = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://192.168.0.181:5173",
-    "https://9478c91b2994.ngrok-free.app"
+    "https://b44141080129.ngrok-free.app"
 ]
 
 from decouple import config
