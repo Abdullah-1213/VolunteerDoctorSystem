@@ -15,7 +15,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     allowedHosts: [
-      'b44141080129.ngrok-free.app',
+      'scaldic-shunnable-kiera.ngrok-free.dev',
       '127.0.0.1:8000',
       'localhost',
     ],

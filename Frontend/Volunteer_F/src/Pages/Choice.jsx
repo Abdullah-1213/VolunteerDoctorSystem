@@ -8,6 +8,7 @@ function ChoicePage() {
   const handleChoice = (role) => {
     navigate(`/${action}/${role}`); // e.g., /signup/doctor or /login/patient
   };
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-50 px-4">

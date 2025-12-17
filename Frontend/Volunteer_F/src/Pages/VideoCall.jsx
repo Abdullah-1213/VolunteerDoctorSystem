@@ -60,7 +60,7 @@ const VideoCall = () => {
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
-        `https://b44141080129.ngrok-free.app/api/drugs/search/?name=${encodeURIComponent(searchTerm)}`,
+        `http://127.0.0.1:8000/api/drugs/search/?name=${encodeURIComponent(searchTerm)}`,
         {
           method: "GET",
           headers: {
@@ -108,7 +108,7 @@ const VideoCall = () => {
   // Existing refreshToken, connectWebSocket, initializeResources, toggleVideo, toggleAudio, handleEndCall, handleUploadPrescription, savePrescription, handleDownloadReports, handleUploadReports, handleDownloadPrescription functions remain unchanged
   const refreshToken = useCallback(async () => {
     try {
-      const response = await fetch("https://b44141080129.ngrok-free.app/api/token/refresh/", {
+      const response = await fetch("http://127.0.0.1:8000/api/token/refresh/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -137,7 +137,7 @@ const VideoCall = () => {
 
       isConnectingRef.current = true;
       socketRef.current = new WebSocket(
-        `wss://b44141080129.ngrok-free.app/ws/video/${roomId}/?token=${token}`
+        `wss://127.0.0.1:8000/ws/video/${roomId}/?token=${token}`
       );
 
       socketRef.current.onopen = () => {
@@ -339,7 +339,7 @@ const VideoCall = () => {
         return;
       }
 
-      const response = await fetch("https://b44141080129.ngrok-free.app/api/prescriptions/", {
+      const response = await fetch("http://127.0.0.1:8000/api/prescriptions/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -392,7 +392,7 @@ const VideoCall = () => {
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
-        `https://b44141080129.ngrok-free.app/api/prescriptions/?room_id=${roomId}`,
+        `http://127.0.0.1:8000/api/prescriptions/?room_id=${roomId}`,
         {
           headers: {
             "Authorization": `Bearer ${token}`,

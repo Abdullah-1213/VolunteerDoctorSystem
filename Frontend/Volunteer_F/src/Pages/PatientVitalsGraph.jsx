@@ -9,12 +9,24 @@ import {
   Title,
   Tooltip,
   Legend,
+  Filler
 } from 'chart.js';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Activity, 
+  Thermometer, 
+  Heart, 
+  Droplet, 
+  Search, 
+  User, 
+  Calendar, 
+  FileText, 
+  AlertCircle,
+  Stethoscope
+} from 'lucide-react';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
-
-const FIXED_CHART_HEIGHT = 350;
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 const PatientVitalsGraph = () => {
   const navigate = useNavigate();
@@ -26,7 +38,7 @@ const PatientVitalsGraph = () => {
   const [error, setError] = useState(null);
   const [selectedVital, setSelectedVital] = useState('all');
 
-  // Format CNIC input
+  // Format CNIC: 12345-1234567-1
   const formatCnicInput = (value) => {
     const digits = value.replace(/\D/g, '');
     if (digits.length <= 5) return digits;
@@ -37,70 +49,76 @@ const PatientVitalsGraph = () => {
   const handleCnicChange = (event) => {
     const formatted = formatCnicInput(event.target.value);
     setCnic(formatted);
-    setPatient(null);
-    setVitalsData([]);
+    // Clear data on new search to avoid confusion
+    if (patient) {
+        setPatient(null);
+        setVitalsData([]);
+    }
     setError(null);
   };
 
-  // Fetch Data
-  useEffect(() => {
+  const fetchPatientAndVitals = async () => {
     const isValidCnic = (value) => /^\d{5}-\d{7}-\d{1}$/.test(value);
+    
     if (!cnic) return;
-
     if (!isValidCnic(cnic)) {
-      setError('❌ CNIC format incorrect. Use: 12345-1234567-1');
+      setError('Please enter a complete CNIC (e.g. 12345-1234567-1)');
       return;
     }
 
-    const fetchPatientAndVitals = async () => {
-      setLoading(true);
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        navigate('/login');
-        return;
+    setLoading(true);
+    setError(null);
+    const token = localStorage.getItem('access_token');
+    
+    // Auth Check
+    if (!token) { 
+        // In a real app, maybe redirect or show modal
+        console.warn("No token found"); 
+    }
+
+    try {
+      // 1. Check CNIC
+      const cnicResponse = await fetch('http://127.0.0.1:8000/api/check-cnic/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify({ cnic }),
+      });
+
+      if (!cnicResponse.ok) throw new Error('Unable to verify CNIC.');
+
+      const cnicData = await cnicResponse.json();
+      if (!cnicData.exists) {
+        throw new Error('No patient record found for this CNIC.');
       }
 
-      try {
-        const cnicResponse = await fetch('http://localhost:8000/api/check-cnic/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ cnic }),
-        });
+      setPatient(cnicData.patient);
 
-        if (!cnicResponse.ok) throw new Error('🔒 CNIC check failed.');
+      // 2. Fetch Records
+      const visitsResponse = await fetch('http://127.0.0.1:8000/api/patient-records/', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token ? `Bearer ${token}` : '',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      });
 
-        const cnicData = await cnicResponse.json();
-        if (!cnicData.exists) {
-          setError('⚠️ No patient found with this CNIC.');
-          setLoading(false);
-          return;
-        }
+      const visitsData = await visitsResponse.json();
+      // Filter strictly by ID
+      const filteredVisits = visitsData
+        .filter((v) => v.patient_id === cnicData.patient.id)
+        .sort((a, b) => new Date(a.date) - new Date(b.date)); // Ensure chronological order
 
-        setPatient(cnicData.patient);
-
-        const visitsResponse = await fetch('http://localhost:8000/api/patient-records/', {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            'ngrok-skip-browser-warning': 'true',
-          },
-        });
-
-        const visitsData = await visitsResponse.json();
-        const filteredVisits = visitsData.filter((v) => v.patient_id === cnicData.patient.id);
-        setVitalsData(filteredVisits);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPatientAndVitals();
-  }, [cnic, navigate]);
+      setVitalsData(filteredVisits);
+    } catch (err) {
+      setError(err.message);
+      setPatient(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const parseBP = (bp) => {
     if (!bp) return { systolic: null, diastolic: null };
@@ -108,180 +126,323 @@ const PatientVitalsGraph = () => {
     return { systolic: sys || null, diastolic: dia || null };
   };
 
-  const allDatasets = useMemo(
-    () => [
-      { label: 'Heart Rate (bpm)', data: vitalsData.map((v) => v.hr ?? null), borderColor: '#22c55e', tension: 0.3, id: 'hr' },
-      { label: 'Systolic BP', data: vitalsData.map((v) => parseBP(v.bp).systolic), borderColor: '#ef4444', tension: 0.3, id: 'systolic' },
-      { label: 'Diastolic BP', data: vitalsData.map((v) => parseBP(v.bp).diastolic), borderColor: '#8b5cf6', tension: 0.3, id: 'diastolic' },
-      { label: 'Temperature (°C)', data: vitalsData.map((v) => v.temp ?? null), borderColor: '#3b82f6', tension: 0.3, id: 'temp' },
-      { label: 'Oxygen (%)', data: vitalsData.map((v) => v.spo2 ?? null), borderColor: '#f59e0b', tension: 0.3, id: 'spo2' },
-    ],
-    [vitalsData]
-  );
+  // --- Chart Configuration ---
+  const chartData = useMemo(() => {
+    const labels = vitalsData.map((v) => 
+      v.date ? new Date(v.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'
+    );
 
-  const chartData = useMemo(
-    () => ({
-      labels: vitalsData.map((v) =>
-        v.date ? new Date(v.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Unknown'
-      ),
-      datasets: selectedVital === 'all' ? allDatasets : allDatasets.filter((d) => d.id === selectedVital),
-    }),
-    [vitalsData, allDatasets, selectedVital]
-  );
+    const datasets = [
+      {
+        label: 'Systolic BP',
+        data: vitalsData.map((v) => parseBP(v.bp).systolic),
+        borderColor: '#ef4444', // Red
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        tension: 0.4,
+        id: 'systolic',
+        hidden: selectedVital !== 'all' && selectedVital !== 'systolic',
+      },
+      {
+        label: 'Diastolic BP',
+        data: vitalsData.map((v) => parseBP(v.bp).diastolic),
+        borderColor: '#f87171', // Light Red
+        borderDash: [5, 5],
+        tension: 0.4,
+        id: 'diastolic',
+        hidden: selectedVital !== 'all' && selectedVital !== 'diastolic',
+      },
+      {
+        label: 'Heart Rate',
+        data: vitalsData.map((v) => v.hr ?? null),
+        borderColor: '#10b981', // Emerald
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        tension: 0.4,
+        id: 'hr',
+        hidden: selectedVital !== 'all' && selectedVital !== 'hr',
+      },
+      {
+        label: 'SpO2 (%)',
+        data: vitalsData.map((v) => v.spo2 ?? null),
+        borderColor: '#3b82f6', // Blue
+        tension: 0.4,
+        id: 'spo2',
+        hidden: selectedVital !== 'all' && selectedVital !== 'spo2',
+      },
+      {
+        label: 'Temp (°C)',
+        data: vitalsData.map((v) => v.temp ?? null),
+        borderColor: '#f59e0b', // Amber
+        tension: 0.4,
+        id: 'temp',
+        hidden: selectedVital !== 'all' && selectedVital !== 'temp',
+      },
+    ];
 
-  const chartOptions = useMemo(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false, // prevent jumpy animation on mobile
-      scales: { x: { ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } },
-      plugins: { legend: { position: 'bottom' } },
-    }),
-    []
-  );
+    return { labels, datasets };
+  }, [vitalsData, selectedVital]);
 
-  const vitalStats = vitalsData.length
-    ? {
-        avgHR: Math.round(vitalsData.reduce((s, v) => s + (v.hr || 0), 0) / vitalsData.length),
-        avgSpO2: Math.round(vitalsData.reduce((s, v) => s + (v.spo2 || 0), 0) / vitalsData.length),
-        totalVisits: vitalsData.length,
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    plugins: {
+      legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } },
+      tooltip: {
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#1e293b',
+        bodyColor: '#475569',
+        borderColor: '#e2e8f0',
+        borderWidth: 1,
+        padding: 10,
+        boxPadding: 4,
+        usePointStyle: true,
       }
-    : null;
+    },
+    scales: {
+      x: { grid: { display: false }, border: { display: false } },
+      y: { border: { display: false }, grid: { color: '#f1f5f9' } },
+    },
+  };
+
+  // --- Stats Calculation ---
+  const latestVital = vitalsData.length > 0 ? vitalsData[vitalsData.length - 1] : null;
+  const vitalStats = latestVital ? {
+    hr: latestVital.hr || '-',
+    bp: latestVital.bp || '-',
+    spo2: latestVital.spo2 || '-',
+    temp: latestVital.temp || '-',
+  } : null;
 
   return (
-    <div className="min-h-screen w-full bg-blue-50 py-5 sm:px-6 overflow-x-hidden">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="bg-white shadow-lg rounded-2xl p-6 border-t-4 border-blue-500 flex items-center gap-3">
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-2xl">🩺</div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Patient Vitals Monitor</h1>
-            <p className="text-sm text-gray-500">Real-time health tracking</p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-12">
+      
 
-        {/* CNIC Input */}
-        <div className="bg-white shadow-lg rounded-2xl p-6">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Patient CNIC</label>
-          <input
-            type="text"
-            value={cnic}
-            onChange={handleCnicChange}
-            placeholder="12345-1234567-1"
-            className={`w-full px-4 py-3 border rounded-lg text-base focus:outline-none ${
-              error ? 'border-red-500' : 'border-gray-300 focus:border-blue-500'
-            }`}
-          />
-          <div className="mt-3 h-10 flex items-center">
-            {error && <div className="p-3 bg-red-50 border-l-4 border-red-600 rounded text-red-700 text-sm">{error}</div>}
-          </div>
-        </div>
 
-        {loading && <div className="text-center py-10 text-gray-500">Loading...</div>}
-
-        {/* Patient Info & Chart */}
-        {patient && vitalsData.length > 0 && (
-          <>
-            <div className="bg-blue-500 text-white shadow-lg rounded-2xl p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-white/20 p-3 rounded-lg">
-                <p className="text-xs opacity-80">Name</p>
-                <p className="font-bold">{patient.name}</p>
-              </div>
-              <div className="bg-white/20 p-3 rounded-lg">
-                <p className="text-xs opacity-80">Total Visits</p>
-                <p className="font-bold">{vitalStats.totalVisits}</p>
-              </div>
-              <div className="bg-white/20 p-3 rounded-lg">
-                <p className="text-xs opacity-80">Avg HR</p>
-                <p className="font-bold">{vitalStats.avgHR} bpm</p>
-              </div>
-              <div className="bg-white/20 p-3 rounded-lg">
-                <p className="text-xs opacity-80">Avg SpO2</p>
-                <p className="font-bold">{vitalStats.avgSpO2}%</p>
-              </div>
-            </div>
-
-            {/* Chart */}
-            <div className="bg-white shadow-lg rounded-2xl p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-                <h2 className="text-xl font-bold text-gray-800">Vitals Trend</h2>
-                <select
-                  value={selectedVital}
-                  onChange={(e) => setSelectedVital(e.target.value)}
-                  className="px-3 py-2 border rounded-lg text-sm w-full sm:w-48 max-w-full truncate"
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
+        
+        {/* 2. Search & Identity Section */}
+        <section className="flex flex-col md:flex-row gap-6 items-start">
+            
+            {/* Search Card */}
+            <div className="w-full md:w-1/3 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Search Patient</label>
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={cnic}
+                        onChange={handleCnicChange}
+                        placeholder="00000-0000000-0"
+                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all outline-none font-mono text-slate-700"
+                    />
+                    <Search className="w-5 h-5 text-slate-400 absolute left-3 top-3.5" />
+                </div>
+                
+                <button 
+                    onClick={fetchPatientAndVitals}
+                    disabled={loading || cnic.length < 13}
+                    className="mt-4 w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 rounded-xl transition-all disabled:opacity-50 flex justify-center items-center gap-2"
                 >
-                  <option value="all">All Vitals</option>
-                  <option value="hr">Heart Rate</option>
-                  <option value="systolic">Systolic BP</option>
-                  <option value="diastolic">Diastolic BP</option>
-                  <option value="temp">Temperature</option>
-                  <option value="spo2">Oxygen Level</option>
-                </select>
-              </div>
-              <div className="w-full relative" style={{ height: FIXED_CHART_HEIGHT, minHeight: FIXED_CHART_HEIGHT, maxHeight: FIXED_CHART_HEIGHT }}>
-                <Line data={chartData} options={chartOptions} />
-              </div>
+                    {loading ? (
+                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    ) : (
+                        <>Fetch Records</>
+                    )}
+                </button>
+
+                <AnimatePresence>
+                    {error && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                            className="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-center gap-2 border border-red-100"
+                        >
+                            <AlertCircle className="w-4 h-4" />
+                            {error}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
-            {/* Visit History */}
-            <div className="bg-white shadow-lg rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Visit History</h2>
-              {/* Mobile */}
-              <div className="block lg:hidden space-y-3">
-                {vitalsData.map((v, idx) => (
-                  <div key={idx} className="border rounded-lg p-4 shadow-sm">
-                    <div className="flex justify-between mb-2 text-sm">
-                      <span>{new Date(v.date).toLocaleDateString()}</span>
-                      <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded">Visit #{idx + 1}</span>
+            {/* Patient Identity Card (Conditional) */}
+            <div className="w-full md:w-2/3">
+                {patient ? (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="h-full bg-gradient-to-r from-teal-600 to-emerald-600 rounded-2xl shadow-lg text-white p-6 relative overflow-hidden flex flex-col justify-between"
+                    >
+                        <div className="absolute top-0 right-0 p-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                        
+                        <div className="relative z-10 flex items-center gap-4">
+                            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm text-2xl font-bold">
+                                {patient.name.charAt(0)}
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold">{patient.name}</h2>
+                                <p className="text-teal-100 flex items-center gap-2 text-sm opacity-90">
+                                    <User className="w-4 h-4" /> Age: {patient.age || 'N/A'} • {patient.gender || 'N/A'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="relative z-10 mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                           <div className="bg-black/20 rounded-lg p-3 backdrop-blur-sm">
+                                <p className="text-xs text-teal-100 uppercase tracking-wider mb-1">Last Visit</p>
+                                <p className="font-semibold text-sm">
+                                    {vitalsData.length > 0 ? new Date(vitalsData[vitalsData.length-1].date).toLocaleDateString() : 'N/A'}
+                                </p>
+                           </div>
+                           <div className="bg-black/20 rounded-lg p-3 backdrop-blur-sm">
+                                <p className="text-xs text-teal-100 uppercase tracking-wider mb-1">Total Visits</p>
+                                <p className="font-semibold text-sm">{vitalsData.length}</p>
+                           </div>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <div className="h-full bg-white rounded-2xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 p-8 min-h-[200px]">
+                        <Activity className="w-12 h-12 mb-3 opacity-20" />
+                        <p>Enter a CNIC to view patient history</p>
                     </div>
-                    <p>BP: {v.bp}</p>
-                    <p>HR: {v.hr}</p>
-                    <p>Temp: {v.temp}°C</p>
-                    <p>SpO2: {v.spo2}%</p>
-                  </div>
-                ))}
-              </div>
-              {/* Desktop */}
-              <div className="hidden lg:block overflow-x-auto w-full">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 border-b">
-                      {['Date', 'BP', 'HR', 'Temp', 'SpO2', 'Diagnosis', 'Treatment'].map((c) => (
-                        <th key={c} className="p-3 text-left text-sm font-bold">
-                          {c}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vitalsData.map((v, idx) => (
-                      <tr key={idx} className="border-b">
-                        <td className="p-3">{new Date(v.date).toLocaleDateString()}</td>
-                        <td className="p-3">{v.bp}</td>
-                        <td className="p-3">{v.hr}</td>
-                        <td className="p-3">{v.temp}</td>
-                        <td className="p-3">{v.spo2}</td>
-                        <td className="p-3">{v.diagnosis || '—'}</td>
-                        <td className="p-3">{v.treatment || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                )}
             </div>
-          </>
-        )}
+        </section>
 
-        {!loading && !patient && !error && cnic === '' && (
-          <div className="bg-white shadow-lg rounded-2xl p-12 text-center">
-            <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Enter Patient CNIC</h3>
-            <p className="text-gray-600">Start by entering a patient’s CNIC.</p>
-          </div>
+        {patient && vitalsData.length > 0 && (
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="space-y-8"
+            >
+                {/* 3. Latest Vitals Grid */}
+                <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatCard 
+                        icon={Activity} 
+                        label="Blood Pressure" 
+                        value={vitalStats?.bp} 
+                        unit="mmHg"
+                        color="text-rose-600"
+                        bg="bg-rose-50"
+                    />
+                    <StatCard 
+                        icon={Heart} 
+                        label="Heart Rate" 
+                        value={vitalStats?.hr} 
+                        unit="bpm"
+                        color="text-emerald-600"
+                        bg="bg-emerald-50"
+                    />
+                    <StatCard 
+                        icon={Thermometer} 
+                        label="Temperature" 
+                        value={vitalStats?.temp} 
+                        unit="°C"
+                        color="text-amber-600"
+                        bg="bg-amber-50"
+                    />
+                    <StatCard 
+                        icon={Droplet} 
+                        label="SpO2 Level" 
+                        value={vitalStats?.spo2} 
+                        unit="%"
+                        color="text-blue-600"
+                        bg="bg-blue-50"
+                    />
+                </section>
+
+                {/* 4. Chart Section */}
+                <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-800">Health Trends</h3>
+                            <p className="text-sm text-slate-500">Visualizing vitals over time</p>
+                        </div>
+                        <div className="flex bg-slate-100 p-1 rounded-lg">
+                            {['all', 'systolic', 'hr', 'temp'].map((filter) => (
+                                <button
+                                    key={filter}
+                                    onClick={() => setSelectedVital(filter)}
+                                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all capitalize ${
+                                        selectedVital === filter 
+                                        ? 'bg-white text-slate-800 shadow-sm' 
+                                        : 'text-slate-500 hover:text-slate-700'
+                                    }`}
+                                >
+                                    {filter === 'systolic' ? 'BP' : filter}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="h-[350px] w-full">
+                        <Line data={chartData} options={chartOptions} />
+                    </div>
+                </section>
+
+                {/* 5. History Table */}
+                <section className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="p-6 border-b border-slate-100 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-slate-400" />
+                        <h3 className="text-lg font-bold text-slate-800">Visit History</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
+                                <tr>
+                                    <th className="px-6 py-4">Date</th>
+                                    <th className="px-6 py-4">BP</th>
+                                    <th className="px-6 py-4">Heart Rate</th>
+                                    <th className="px-6 py-4">Diagnosis</th>
+                                    <th className="px-6 py-4">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {vitalsData.map((visit, idx) => (
+                                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                        <td className="px-6 py-4 font-medium text-slate-800">
+                                            <div className="flex items-center gap-2">
+                                                <Calendar className="w-4 h-4 text-slate-400" />
+                                                {new Date(visit.date).toLocaleDateString()}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 font-medium text-xs border border-rose-100">
+                                                {visit.bp}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-slate-600">{visit.hr} bpm</td>
+                                        <td className="px-6 py-4 text-slate-600 max-w-xs truncate">{visit.diagnosis || 'Routine Checkup'}</td>
+                                        <td className="px-6 py-4">
+                                            <button className="text-teal-600 hover:text-teal-800 font-medium hover:underline">View Details</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </motion.div>
         )}
-      </div>
+      </main>
     </div>
   );
 };
+
+// Subcomponent for Cleaner Code
+const StatCard = ({ icon: Icon, label, value, unit, color, bg }) => (
+    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4 hover:shadow-md transition-shadow">
+        <div className={`w-12 h-12 rounded-full ${bg} ${color} flex items-center justify-center flex-shrink-0`}>
+            <Icon className="w-6 h-6" />
+        </div>
+        <div>
+            <p className="text-sm text-slate-500 font-medium">{label}</p>
+            <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold text-slate-800">{value}</span>
+                <span className="text-xs text-slate-400 font-medium">{unit}</span>
+            </div>
+        </div>
+    </div>
+);
 
 export default PatientVitalsGraph;

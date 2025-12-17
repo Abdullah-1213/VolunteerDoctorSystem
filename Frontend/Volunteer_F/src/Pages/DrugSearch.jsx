@@ -1,7 +1,17 @@
 import { useState } from "react";
 import Button from "../Components/Button";
 import Input from "../Components/Input";
-import { ChevronDownIcon, ChevronUpIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
+import { 
+  ChevronDownIcon, 
+  ChevronUpIcon, 
+  ArrowTopRightOnSquareIcon, 
+  BeakerIcon, 
+  ShieldExclamationIcon,
+  InformationCircleIcon,
+  MagnifyingGlassIcon,
+  StarIcon
+} from "@heroicons/react/24/outline";
+import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
 
 export default function DrugSearch() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -10,7 +20,6 @@ export default function DrugSearch() {
   const [error, setError] = useState(null);
   const [expandedDrugs, setExpandedDrugs] = useState(new Set());
 
-  // Only allow alphabet input
   const handleInputChange = (e) => {
     const value = e.target.value;
     if (/^[a-zA-Z\s]*$/.test(value)) {
@@ -33,63 +42,42 @@ export default function DrugSearch() {
     const trimmedTerm = searchTerm.trim();
     if (!trimmedTerm) return;
 
-    console.log("🔍 Starting search for:", trimmedTerm);
-    console.log("Token present:", !!localStorage.getItem("access_token"));
-
     setLoading(true);
     setError(null);
     setDrugData([]);
 
     try {
       const token = localStorage.getItem("access_token");
-
       const headers = {
         "Content-Type": "application/json",
         Authorization: token ? `Bearer ${token}` : "",
         "ngrok-skip-browser-warning": "true",
       };
-      console.log("Headers being sent:", headers);
 
       const response = await fetch(
         `http://127.0.0.1:8000/api/drugs/search?name=${encodeURIComponent(trimmedTerm)}`,
         { method: "GET", headers }
       );
 
-      console.log("Response status:", response.status);
-      console.log("Response content-type:", response.headers.get("content-type"));
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Raw error response:", errorText);
-        throw new Error(`API error: ${response.status} - ${response.statusText}`);
+        throw new Error(`API error: ${response.status}`);
       }
 
       const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
-        const htmlText = await response.text();
-        console.error("Received HTML instead of JSON:", htmlText.substring(0, 200));
-        throw new Error("Invalid response: Expected JSON but got HTML. Check ngrok header.");
+        throw new Error("Invalid response format");
       }
 
       const data = await response.json();
-      console.log("✅ Parsed data:", data);
       setDrugData(data);
     } catch (error) {
       console.error("Search error:", error);
-
-      let friendlyMessage = "Something went wrong. Please try again.";
-
+      let friendlyMessage = "We encountered an issue retrieving the drug data.";
+      
       if (error.message.includes("Failed to fetch")) {
-        friendlyMessage = "Unable to connect to server. Please check your internet or try again later.";
-      } 
-      else if (error.message.includes("API error") && error.message.includes("500")) {
-        friendlyMessage = "Server issue. Please try after a few minutes.";
-      } 
-      else if (error.message.includes("404")) {
-        friendlyMessage = "No drug found with that name.";
-      }
-      else if (error.message.includes("JSON")) {
-        friendlyMessage = "Unexpected response from server. Please refresh the page.";
+        friendlyMessage = "Connection failed. Please check your internet connection.";
+      } else if (error.message.includes("404")) {
+        friendlyMessage = "No drugs found matching that name.";
       }
 
       setError(friendlyMessage);
@@ -98,170 +86,219 @@ export default function DrugSearch() {
     }
   };
 
-  const KeyInfo = ({ label, value, icon: Icon, className = "" }) => (
-    <div className={`flex items-center space-x-2 text-sm ${className}`}>
-      <Icon className="w-4 h-4 text-gray-500" />
-      <span className="font-medium text-gray-700">{label}:</span>
-      <span className="text-gray-600">{value || "N/A"}</span>
-    </div>
-  );
+  // --- Sub-Components for cleaner UI ---
 
-  const CriticalInfo = ({ label, value, icon: Icon, severity }) => (
-    <div className={`flex items-center space-x-2 text-sm p-2 rounded-lg ${severity === 'warning' ? 'bg-yellow-50 border border-yellow-200' : severity === 'danger' ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
-      <Icon className={`w-4 h-4 ${severity === 'warning' ? 'text-yellow-600' : severity === 'danger' ? 'text-red-600' : 'text-green-600'}`} />
-      <span className="font-semibold text-gray-800">{label}:</span>
-      <span className={`font-medium ${severity === 'warning' ? 'text-yellow-800' : severity === 'danger' ? 'text-red-800' : 'text-green-800'}`}>{value}</span>
+  const Badge = ({ children, color = "gray" }) => {
+    const colors = {
+      gray: "bg-gray-100 text-gray-700 border-gray-200",
+      red: "bg-red-50 text-red-700 border-red-200",
+      yellow: "bg-amber-50 text-amber-700 border-amber-200",
+      green: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      blue: "bg-blue-50 text-blue-700 border-blue-200",
+    };
+    return (
+      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${colors[color]} inline-flex items-center gap-1`}>
+        {children}
+      </span>
+    );
+  };
+
+  const InfoRow = ({ label, value }) => (
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline py-2 border-b border-gray-100 last:border-0">
+      <span className="text-sm font-medium text-slate-500 min-w-[120px]">{label}</span>
+      <span className="text-sm text-slate-800 font-medium text-right sm:text-left mt-1 sm:mt-0">{value || "N/A"}</span>
     </div>
   );
 
   return (
-    <div className="w-full max-w-4xl mx-auto mt-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-xl border border-blue-200">
-      <h2 className="text-3xl font-bold text-center text-blue-900 mb-6 flex items-center justify-center space-x-2">
-        <span className="text-4xl">💊</span>
-        
-      </h2>
+    <div className="w-full max-w-5xl mx-auto mt-10 px-4 mb-20">
+      
+      {/* Header Section */}
+      <div className="text-center mb-10 space-y-2">
+        <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight">
+          Clinical Drug Search
+        </h1>
+        <p className="text-slate-500 text-lg">
+          Access comprehensive pharmaceutical data, safety warnings, and interactions.
+        </p>
+      </div>
 
-      <form onSubmit={handleSearch} className="space-y-4 mb-6">
-        <Input
-          value={searchTerm}
-          onChange={handleInputChange}
-          placeholder="Enter Drug Name (e.g., Aspirin)"
-          className="rounded-lg border-blue-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition duration-200 text-lg py-3"
-        />
+      {/* Search Bar */}
+      <div className="relative max-w-2xl mx-auto mb-12">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <MagnifyingGlassIcon className="h-6 w-6 text-slate-400" />
+        </div>
+        <form onSubmit={handleSearch} className="relative group">
+          <Input
+            value={searchTerm}
+            onChange={handleInputChange}
+            placeholder="Search generic or brand names (e.g. Panadol, Aspirin)..."
+            className="w-full pl-12 pr-32 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-lg transition-all duration-300 placeholder:text-slate-400"
+          />
+          <div className="absolute right-2 top-2 bottom-2">
+            <Button
+              type="submit"
+              disabled={loading || !searchTerm}
+              className={`h-full px-6 rounded-xl font-semibold transition-all duration-200 ${
+                loading || !searchTerm 
+                ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
+                : "bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              }`}
+            >
+              {loading ? "Searching..." : "Search"}
+            </Button>
+          </div>
+        </form>
+      </div>
 
-        <Button
-          type="submit"
-          className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-          disabled={loading}
-        >
-          {loading ? (
-            <span className="flex items-center justify-center space-x-2">
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              <span>Searching...</span>
-            </span>
-          ) : (
-            <>
-              <span className="text-xl">🔍</span>
-              <span>Search</span>
-            </>
-          )}
-        </Button>
-      </form>
-
-      {/* User-Friendly Error */}
+      {/* Error State */}
       {error && (
-        <div className="text-center p-4 bg-red-50 border border-red-200 rounded-lg mb-6 animate-fade-in">
-          <p className="text-red-700 font-semibold flex items-center justify-center space-x-2">
-            <span className="text-2xl">⚠️</span>
-            <span>{error}</span>
-          </p>
-          <button
-            onClick={() => setError(null)}
-            className="mt-2 text-sm text-red-600 underline hover:text-red-800"
-          >
-            Dismiss
-          </button>
+        <div className="max-w-2xl mx-auto mb-8 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm flex items-start gap-3">
+          <ShieldExclamationIcon className="w-6 h-6 text-red-500 flex-shrink-0" />
+          <div>
+            <h3 className="text-red-800 font-bold">Search Error</h3>
+            <p className="text-red-700 text-sm mt-1">{error}</p>
+          </div>
         </div>
       )}
 
-      {drugData.length === 0 && !loading && searchTerm.trim() && !error && (
-        <div className="text-center p-6 bg-gray-50 rounded-lg">
-          <p className="text-gray-500 font-medium flex items-center justify-center space-x-2">
-            <span className="text-2xl">❌</span>
-            <span>No results found.</span>
-          </p>
+      {/* No Results */}
+      {drugData.length === 0 && !loading && searchTerm && !error && (
+        <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300">
+          <BeakerIcon className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <p className="text-slate-500 text-lg">No results found for "{searchTerm}"</p>
+          <p className="text-slate-400 text-sm">Check the spelling or try the generic name.</p>
         </div>
       )}
 
-      {drugData.length > 0 && !loading && !error && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-bold text-blue-900 flex items-center space-x-2">
-            <span>Results ({drugData.length})</span>
-          </h3>
-          {drugData.map((drug) => {
-            const isExpanded = expandedDrugs.has(drug.id);
-            const pregnancySeverity = drug.pregnancy_category === 'X' ? 'danger' : drug.pregnancy_category === 'D' ? 'warning' : 'info';
-            const alcoholSeverity = drug.alcohol.includes('Major') ? 'danger' : drug.alcohol.includes('Moderate') ? 'warning' : 'info';
-            return (
-              <div key={drug.id} className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-                {/* Header: Essential Info */}
-                <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50">
-                  <h4 className="text-xl font-bold text-blue-800 mb-2">{drug.drug_name}</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                    <KeyInfo label="Condition" value={drug.medical_condition} icon={({ className }) => <span className={className}>🩺</span>} />
-                    <KeyInfo label="Generic" value={drug.generic_name} icon={({ className }) => <span className={className}>💊</span>} />
+      {/* Results Grid */}
+      <div className="space-y-6">
+        {drugData.map((drug) => {
+          const isExpanded = expandedDrugs.has(drug.id);
+          const pregRisk = drug.pregnancy_category === 'X' ? 'red' : drug.pregnancy_category === 'D' ? 'yellow' : 'blue';
+          const alcRisk = drug.alcohol.toLowerCase().includes('major') ? 'red' : drug.alcohol.toLowerCase().includes('moderate') ? 'yellow' : 'green';
+
+          return (
+            <div 
+              key={drug.id} 
+              className="bg-white rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow duration-300 overflow-hidden group"
+            >
+              {/* Card Header / Summary */}
+              <div className="p-6 cursor-pointer" onClick={() => toggleExpand(drug.id)}>
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                  
+                  {/* Title & Generic */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-2xl font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
+                        {drug.drug_name}
+                      </h3>
+                      {drug.rating && (
+                        <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-md border border-yellow-100">
+                          <StarIconSolid className="w-4 h-4 text-amber-400" />
+                          <span className="text-xs font-bold text-amber-700">{drug.rating}</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-slate-500 font-medium flex items-center gap-2">
+                      <span className="text-xs uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded">Generic</span>
+                      {drug.generic_name}
+                    </p>
                   </div>
-                  {/* Critical Alerts */}
-                  <div className="mt-3 space-y-2">
-                    <CriticalInfo
-                      label="Pregnancy"
-                      value={drug.pregnancy_category}
-                      icon={({ className }) => <span className={className}>👶</span>}
-                      severity={pregnancySeverity}
-                    />
-                    <CriticalInfo
-                      label="Alcohol"
-                      value={drug.alcohol}
-                      icon={({ className }) => <span className={className}>🍸</span>}
-                      severity={alcoholSeverity}
-                    />
+
+                  {/* Quick Safety Chips */}
+                  <div className="flex flex-wrap gap-2 md:justify-end">
+                    <Badge color={pregRisk}>Pregnancy: Cat {drug.pregnancy_category}</Badge>
+                    <Badge color={alcRisk}>Alcohol: {drug.alcohol}</Badge>
+                    <Badge color="gray">{drug.rx_otc}</Badge>
                   </div>
                 </div>
 
-                {/* Side Effects - Always Visible */}
-                <div className="p-4 bg-red-50 border-t border-red-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-red-800 flex items-center space-x-2">
-                      <span className="text-xl">⚠️</span>
-                      <span>Side Effects</span>
-                    </span>
-                  </div>
-                  <p className="text-sm text-red-700 leading-relaxed">{drug.side_effects}</p>
+                {/* Medical Condition Snippet */}
+                <div className="mt-4 flex items-start gap-2 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                  <InformationCircleIcon className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-slate-700 leading-relaxed">
+                    <span className="font-semibold text-slate-900">Used for: </span>
+                    {drug.medical_condition}
+                  </p>
                 </div>
+              </div>
 
-                {/* Expandable Details */}
-                <button
-                  onClick={() => toggleExpand(drug.id)}
-                  className="w-full flex items-center justify-center p-3 text-blue-600 hover:bg-blue-50 transition-colors text-sm font-medium"
-                >
-                  <span className="mr-2">{isExpanded ? 'Hide Details' : 'Show Details'}</span>
-                  {isExpanded ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
-                </button>
+              {/* Expandable Details Area */}
+              <div 
+                className={`transition-all duration-300 ease-in-out bg-slate-50 border-t border-slate-200 ${
+                  isExpanded ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+                }`}
+              >
+                <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  
+                  {/* Left Column: Key Attributes */}
+                  <div className="lg:col-span-1 space-y-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-3">Specifications</h4>
+                    <div className="space-y-1">
+                      <InfoRow label="Drug Class" value={drug.drug_classes} />
+                      <InfoRow label="Brand Names" value={drug.brand_names} />
+                      <InfoRow label="Activity" value={drug.activity} />
+                      <InfoRow label="CSA Schedule" value={drug.csa} />
+                      <InfoRow label="Reviews" value={`${drug.no_of_reviews} Patient Reviews`} />
+                    </div>
+                  </div>
 
-                {isExpanded && (
-                  <div className="p-4 bg-gray-50 border-t border-gray-200 space-y-2 text-sm">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      <KeyInfo label="Classes" value={drug.drug_classes} icon={({ className }) => <span className={className}>🧑‍⚕️</span>} />
-                      <KeyInfo label="Brands" value={drug.brand_names} icon={({ className }) => <span className={className}>🏷</span>} />
-                      <KeyInfo label="Activity" value={drug.activity} icon={({ className }) => <span className={className}>⚡</span>} />
-                      <KeyInfo label="Rx/OTC" value={drug.rx_otc} icon={({ className }) => <span className={className}>💊</span>} />
-                      <KeyInfo label="CSA" value={drug.csa} icon={({ className }) => <span className={className}>💉</span>} />
-                      <KeyInfo label="Related" value={drug.related_drugs} icon={({ className }) => <span className={className}>🔗</span>} />
-                      <KeyInfo label="Rating" value={drug.rating} icon={({ className }) => <span className={className}>⭐</span>} className="md:col-span-2" />
-                      <KeyInfo label="Reviews" value={drug.no_of_reviews} icon={({ className }) => <span className={className}>📝</span>} className="md:col-span-2" />
+                  {/* Middle Column: Detailed Safety */}
+                  <div className="lg:col-span-2 space-y-6">
+                    {/* Side Effects Box */}
+                    <div className="bg-red-50 border border-red-100 rounded-xl p-5">
+                      <h4 className="flex items-center gap-2 text-red-800 font-bold mb-3">
+                        <ShieldExclamationIcon className="w-5 h-5" />
+                        Side Effects & Warnings
+                      </h4>
+                      <p className="text-sm text-red-900/80 leading-relaxed">
+                        {drug.side_effects}
+                      </p>
                     </div>
-                    <div className="pt-2 border-t border-gray-300">
-                      <p className="text-xs text-gray-500 mb-2">Condition Details:</p>
-                      <p className="text-sm text-gray-700 italic">{drug.medical_condition_description}</p>
+
+                    {/* Condition Details */}
+                    <div>
+                      <h4 className="text-slate-800 font-bold mb-2">Condition Details</h4>
+                      <p className="text-sm text-slate-600 leading-relaxed bg-white p-4 rounded-xl border border-slate-200">
+                        {drug.medical_condition_description || "No specific condition details available."}
+                      </p>
                     </div>
+
+                    {/* External Link */}
                     <div className="flex justify-end pt-2">
                       <a
                         href={drug.drug_link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold text-sm hover:underline"
                       >
-                        <span>More Info</span>
+                        View Full Clinical Monograph
                         <ArrowTopRightOnSquareIcon className="w-4 h-4" />
                       </a>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+
+              {/* Expansion Toggle Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleExpand(drug.id);
+                }}
+                className="w-full py-3 bg-white border-t border-slate-100 text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                {isExpanded ? (
+                  <>Show Less <ChevronUpIcon className="w-4 h-4" /></>
+                ) : (
+                  <>Show Full Details <ChevronDownIcon className="w-4 h-4" /></>
+                )}
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
