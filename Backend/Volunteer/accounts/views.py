@@ -16,7 +16,7 @@ def get_tokens_for_user(user):
 
 class DoctorSignupView(APIView):
     permission_classes = [AllowAny]
-    authentication_classes = []  # ❌ Disables JWT authentication
+    authentication_classes = []  # Disables JWT authentication
 
 
     def post(self, request):
@@ -31,7 +31,7 @@ class DoctorSignupView(APIView):
 
 class PatientSignupView(APIView):
     permission_classes = [AllowAny]
-    authentication_classes = []  # ❌ Disables JWT authentication
+    authentication_classes = []  #  Disables JWT authentication
     
 
     def post(self, request):
@@ -41,7 +41,7 @@ class PatientSignupView(APIView):
             if serializer.is_valid():
                 patient = serializer.save()
 
-                # 🔥 Send OTP after signup
+                #  Send OTP after signup
                 send_otp(patient)
 
                 return Response({
@@ -101,3 +101,6 @@ class LoginView(APIView):
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
         return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+

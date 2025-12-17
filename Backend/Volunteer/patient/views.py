@@ -39,7 +39,7 @@ class CheckCnicView(APIView):
 
 
 # ------------------------------------
-# 🧍‍♂️ Register New Patient
+#  Register New Patient
 # ------------------------------------
 class RegisterPatientView(APIView):
     authentication_classes = [JWTAuthentication]

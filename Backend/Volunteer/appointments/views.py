@@ -51,6 +51,25 @@ class DoctorAvailabilityCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         if self.request.user.role != 'doctor':
             raise ValidationError("Only doctors can create availability slots.")
+
+        start_time = serializer.validated_data['start_time']
+        end_time = serializer.validated_data['end_time']
+        doctor = self.request.user
+
+        # ❌ Prevent past dates
+        if start_time < timezone.now():
+            raise ValidationError("You cannot create availability for past dates.")
+
+        # ❌ Prevent overlapping availability
+        overlap_exists = DoctorAvailability.objects.filter(
+            doctor=doctor,
+            start_time__lt=end_time,
+            end_time__gt=start_time
+        ).exists()
+
+        if overlap_exists:
+            raise ValidationError("You already have an availability within this time range.")
+
         serializer.save(doctor=self.request.user)
 
 # View all free slots (filtered by doctor_id)
@@ -96,13 +115,28 @@ class DoctorAvailabilitySplitView(APIView):
     def post(self, request):
         if request.user.role != 'doctor':
             raise ValidationError("Only doctors can create availability slots.")
+
         start_time = datetime.fromisoformat(request.data['start_time'].replace('Z', '+00:00'))
         end_time = datetime.fromisoformat(request.data['end_time'].replace('Z', '+00:00'))
         duration = int(request.data['duration'])
 
+        # ❌ Block past dates
+        if start_time < timezone.now():
+            raise ValidationError("Cannot create availability in past dates.")
+
         slots_created = []
         current = start_time
+
         while current + timedelta(minutes=duration) <= end_time:
+
+            # ❌ Check overlap of each slot
+            if DoctorAvailability.objects.filter(
+                doctor=request.user,
+                start_time__lt=current + timedelta(minutes=duration),
+                end_time__gt=current
+            ).exists():
+                raise ValidationError(f"Slot starting at {current} overlaps with existing availability.")
+
             slot = DoctorAvailability.objects.create(
                 doctor=request.user,
                 start_time=current,

@@ -5,10 +5,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-gbwkmfw8tlf45t&z@=t)%p&npsn3m)1dj6@um^uhxpcz-t#l4b'
 DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1','192.168.0.181',".ngrok-free.app"]
+ALLOWED_HOSTS = ['localhost', '127.0.0.1','192.168.0.181',".ngrok-free.app","scaldic-shunnable-kiera.ngrok-free.dev"]
 AUTH_USER_MODEL = 'accounts.User'
 CSRF_TRUSTED_ORIGINS = [
-    "https://b44141080129.ngrok-free.app"
+    "https://scaldic-shunnable-kiera.ngrok-free.dev"
 ]
 
 INSTALLED_APPS = [
@@ -94,7 +94,8 @@ CORS_ALLOW_HEADERS = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://192.168.0.181:5173",
-    "https://b44141080129.ngrok-free.app"
+    "https://b44141080129.ngrok-free.app",
+    "https://scaldic-shunnable-kiera.ngrok-free.dev"
 ]
 
 from decouple import config
